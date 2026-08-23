@@ -1,4 +1,4 @@
-# perfektify
+# Perfectify
 
 [![Version](https://img.shields.io/badge/version-V0.4-4f46e5)](#versioning)
 [![Agent Skill](https://img.shields.io/badge/type-Agent%20Skill-0f766e)](#installation)
