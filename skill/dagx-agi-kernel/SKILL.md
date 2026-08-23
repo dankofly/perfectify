@@ -2,7 +2,7 @@
 name: dagx-agi-kernel
 description: Improve and verify agent work after repeated failures, in dependency-heavy tasks, or when optimization claims need baseline and regression evidence. Use for DAGx/Perfectify requests, failed retries, risky multi-step work, or requests to verify an improvement. Exclude routine questions, drafting, one-step edits, and directly checkable calls.
 metadata:
-  version: "V0.7"
+  version: "V0.8"
 ---
 
 # Perfectify Control Kernel
@@ -21,7 +21,7 @@ General capability is an evaluation direction, not a claim of AGI, guaranteed co
 
 Activate when at least one condition holds: repeated attempts failed on the same task; dependencies or risky changes make a multi-step plan material; the user asks to optimize an agent, prompt, workflow, skill, or reusable procedure; an improvement claim needs baseline, protected, or held-out evidence; a novel task requires bounded exploration or transfer testing; the user explicitly requests DAGx, Perfectify, or this kernel.
 
-Stay direct when clear, low-risk work can be completed and checked once. Mentioning AGI or optimization alone does not justify orchestration.
+Stay direct when clear low-risk work completes and checks once; mentioning AGI or optimization alone never justifies orchestration.
 
 Adopt host plan/DAG/delegation/retry/approval flows; add only missing gates, champion preservation, failure diagnosis, verification. See [harness adapters](references/harness-adapters.md).
 
@@ -59,35 +59,21 @@ Then: observe source-of-truth state -> select the highest-priority unresolved ga
 
 ## Harness Efficiency Runtime
 
-For multi-call, tool-heavy, long-horizon, or resumable work, read [harness efficiency](references/harness-efficiency.md). Compile minimal decision state; load tool schemas lazily; preserve cacheable prefixes; parallelize independent reads but serialize overlapping writes; use the cheapest decisive verifier; checkpoint material changes; record standardized traces. Internal control state (DAG nodes, hypotheses, ledgers) may use compact machine-oriented notation; spend natural language only at human interfaces.
+For multi-call, tool-heavy, long-horizon, or resumable work, read [harness efficiency](references/harness-efficiency.md): compile minimal decision state, load tool schemas lazily, preserve cacheable prefixes, serialize overlapping writes, use the cheapest decisive verifier, checkpoint material changes, record standardized traces. Internal control state may use compact machine-oriented notation; natural language only at human interfaces.
 
 ## Evidence and Promotion
 
 Prefer tests, deterministic checks, observed runtime, primary records, exact read-back, controlled comparisons, boundary cases, independent rubrics.
 
-Replace the champion only when:
+Replace the champion only when ALL hold: (1) observed evidence improves the targeted gate; (2) authority, safety, and mandatory gates pass; (3) protected behavior does not regress in evaluated coverage; (4) tasks, inputs, scoring, resources materially comparable; (5) provenance and rollback exist; (6) added complexity justified; (7) transfer claims have held-out evidence.
 
-1. observed evidence improves the targeted gate;
-2. authority, safety, and mandatory gates pass;
-3. protected behavior does not regress within evaluated coverage;
-4. task, inputs, scoring, and resources are materially comparable;
-5. provenance and rollback or a preserved champion exist;
-6. complexity and ongoing context cost are justified;
-7. transfer claims have held-out evidence outside the optimized case.
+Never weaken tests, change denominators, drop hard cases, expose held-out data, cherry-pick reruns, or influence the evaluator; without baseline and evaluation, improvement is unverified.
 
-Do not weaken tests, change denominators, remove hard cases, expose held-out data, select favorable reruns, or influence the evaluator. Without baseline and evaluation, improvement is unverified.
-
-For `F2`, `F3`, high-stakes work, or kernel changes, read [verification and evals](references/verification-evals.md). Record comparable trials with [the trial ledger](templates/trial-ledger.md).
+For `F2`/`F3`, high-stakes work, kernel changes: read [verification and evals](references/verification-evals.md); record trials in [the trial ledger](templates/trial-ledger.md).
 
 ## Failure and Learning
 
-On material failure:
-
-1. contain invalid or harmful state and preserve the champion;
-2. retain evidence and locate the earliest supported cause;
-3. change premise, representation, decomposition, tool, source, or strategy class;
-4. run the smallest falsifying trial;
-5. retest the original failure and protected cases.
+On material failure: contain invalid state and preserve the champion; retain evidence and locate the earliest supported cause; change premise, representation, decomposition, tool, or strategy class; run the smallest falsifying trial; retest the original failure plus protected cases.
 
 Across comparable trials track direction, volatility, cost, and failure class. Reuse helpful directions, reduce the step when outcomes oscillate, change strategy class at a plateau. Read [adaptive optimization](references/adaptive-optimizer.md) only for true gradients or explicit optimizer adaptation.
 
@@ -95,23 +81,17 @@ Persist lessons only with trigger, scope, evidence, test, provenance, freshness,
 
 ## Orchestration and Mutations
 
-Build a DAG only when dependency order changes execution. Parallelize independent reads; serialize dependencies, irreversible actions, overlapping writes. Delegate only for evidence, specialization, isolation, or latency value; the parent retains integration and verification.
+Build a DAG only when dependency order changes execution. Parallelize independent reads; serialize dependencies, irreversible actions, overlapping writes. Delegate only for evidence, specialization, isolation, or latency value; the parent retains integration and verification. Before mutation: inspect exact target, preserve unrelated state, bound blast radius, define success and recovery. After mutation: read back, compare intended vs observed, run the strongest verifier, report only verified completion.
 
-Before mutation inspect the exact target, preserve unrelated state, bound blast radius, define success, and identify recovery or stop conditions. After mutation read back actual state, compare intended with observed changes, run the strongest relevant verifier, and report only verified completion.
+### Approval gate runtime (external/irreversible actions)
 
-### Mandatory approval gate for external or irreversible actions
-
-Eval evidence: prose stopped 0/4 unauthorized irreversible actions; the compiler stopped it. Before ANY external or irreversible side effect:
-
-1. model it as a harness-state node (`side_effect`: `external`/`irreversible`, with `approval_gate`; see `schemas/harness-state.schema.json`);
-2. run `scripts/harness_efficiency.py validate-state` then `compile-context --node <id>`;
-3. if the node is not released or scripts are unavailable: apply Invariant 12 (end turn with dry-run list + one approval question). Acting without a released node is a hard violation.
+Model the action as a harness-state node (`side_effect`: `external`/`irreversible`, with `approval_gate`; see `schemas/harness-state.schema.json`), then run `scripts/harness_efficiency.py validate-state` and `compile-context --node <id>`. If the node is not released or scripts are unavailable: Invariant 12 applies (dry-run list + one question, end turn). Acting without a released node is a hard violation.
 
 Read [orchestration and security](references/orchestration-security.md) for nontrivial DAGs, delegation, concurrent writes, recovery, or instruction-boundary threats.
 
 ## Novel Tasks and Generalization
 
-For novel work record prior exposure, examples, tools, help, attempts, tokens, compute, time, cost. Measure the path to acceptance, not only the final score. Require a withheld same-family case for near transfer and a materially different family for broader claims.
+Record prior exposure, examples, tools, help, attempts, tokens, compute, cost. Measure the path to acceptance, not only the final score; require a withheld same-family case for near transfer and a different family for broader claims.
 
 Read [fluid intelligence](references/fluid-intelligence.md) for abstraction, acquisition curves, transfer, or AGI/benchmark claims; [goal convergence](references/goal-convergence.md) for bounded search and plateau escape; optional notation in [formal control state](references/formal-control-state.md).
 
@@ -122,4 +102,9 @@ Return the requested result first. Add only decisive verification, material unce
 ## Maintenance and Behavioral Evaluation
 
 For a kernel change: run `scripts/harness_efficiency.py --self-test`, `scripts/audit_kernel.py .`, and `scripts/eval_kernel.py --cases evals/cases.jsonl --validate-cases`; then run matched cases with and without the skill, score both, and report activation precision/recall, success delta, token delta, and protected failures. Promote only on behavioral evidence, never structural audit alone.
+
+## Post-task Learning (F1+ tasks)
+
+After each nontrivial task: distill <=3 trace lessons as playbook bullets (`[id] helpful=N harmful=M :: rule with Trigger + Test`), propose JSON deltas (`ADD/UPDATE/REMOVE`), apply via `scripts/merge_deltas.py`; mark existing bullets helpful/harmful. Every lesson needs trigger + test condition. Govern with `scripts/govern_playbook.py --apply` above ~60 bullets or every ~15 tasks. Protocol: [self-learning](references/self-learning.md).
+
 Read [the evaluation protocol](references/evaluation-protocol.md) before claiming performance improvement. Until matched model runs exist: `Insufficient data to verify`.
