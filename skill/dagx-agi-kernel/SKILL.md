@@ -2,7 +2,7 @@
 name: dagx-agi-kernel
 description: Improve and verify agent work after repeated failures, in dependency-heavy tasks, or when optimization claims need baseline and regression evidence. Use for DAGx/Perfectify requests, failed retries, risky multi-step work, or requests to verify an improvement. Exclude routine questions, drafting, one-step edits, and directly checkable calls.
 metadata:
-  version: "V0.6"
+  version: "V0.7"
 ---
 
 # Perfectify Control Kernel
@@ -13,18 +13,13 @@ Within the authority, scope, and resources granted by the active harness:
 
 > Reach the observable goal with the least sufficient work. Preserve the best verified result. Treat failure as evidence, change a repeated failed strategy, and claim improvement only after matched baseline and regression checks.
 
+Priority order when objectives conflict: `constraints > user objective > task correctness > reusable capability gain > efficiency`. Never trade a higher term for a lower one.
+
 General capability is an evaluation direction, not a claim of AGI, guaranteed convergence, or added authority. Higher-level and user constraints remain binding.
 
 ## Activate Selectively
 
-Activate when at least one condition holds:
-
-- repeated attempts failed on the same task;
-- dependencies or risky changes make a multi-step plan material;
-- the user asks to optimize an agent, prompt, workflow, skill, or reusable procedure;
-- an improvement claim needs baseline, protected, or held-out evidence;
-- a novel task requires bounded exploration or transfer testing;
-- the user explicitly requests DAGx, Perfectify, fluid-intelligence evaluation, or this kernel.
+Activate when at least one condition holds: repeated attempts failed on the same task; dependencies or risky changes make a multi-step plan material; the user asks to optimize an agent, prompt, workflow, skill, or reusable procedure; an improvement claim needs baseline, protected, or held-out evidence; a novel task requires bounded exploration or transfer testing; the user explicitly requests DAGx, Perfectify, or this kernel.
 
 Stay direct when clear, low-risk work can be completed and checked once. Mentioning AGI or optimization alone does not justify orchestration.
 
@@ -57,29 +52,13 @@ Choose the cheapest sufficient mode. Escalate only for evidence, risk, or depend
 
 ## Execution Contract
 
-For nontrivial work determine before acting:
+For nontrivial work determine before acting: objective, deliverable, prioritized acceptance gates; protected behavior, scope, authority, constraints, budget; critical unknowns and sources of truth; current baseline or champion. Ask only when an unresolved choice materially changes outcome, rights, scope, cost, or risk and inspection or a reversible assumption cannot resolve it.
 
-- objective, deliverable, and prioritized acceptance gates;
-- protected behavior, scope, authority, constraints, budget, and freshness;
-- critical unknowns and sources of truth;
-- current valid baseline or champion.
-
-Ask only when an unresolved choice materially changes outcome, rights, recipient, scope, cost, or risk and inspection or a reversible assumption cannot resolve it.
-
-Then:
-
-1. Observe source-of-truth state.
-2. Select the highest-priority unresolved gate or premise-killing unknown.
-3. Take the smallest safe action that can close the gap or falsify the hypothesis.
-4. Observe the result and verify with the strongest task-fit check available.
-5. Promote only under the rules below; otherwise preserve or restore the champion.
-6. Continue only when the next cycle adds evidence or changes strategy materially.
-
-Stop on verified acceptance, missing authority or data, unavailable material verification, evidence saturation, environmental limits, or marginal value below cost or risk.
+Then: observe source-of-truth state -> select the highest-priority unresolved gate or premise-killing unknown -> take the smallest safe action that can close the gap or falsify the hypothesis -> observe and verify with the strongest task-fit check -> promote under the rules below or preserve/restore the champion -> continue only when the next cycle adds evidence or changes strategy materially.
 
 ## Harness Efficiency Runtime
 
-For multi-call, tool-heavy, long-horizon, or resumable work, read [harness efficiency](references/harness-efficiency.md). Compile minimal decision state; load tool schemas lazily; preserve cacheable prefixes; route per node from traces; parallelize independent reads but serialize overlapping writes; use the cheapest decisive verifier; checkpoint material changes; record standardized traces. Use host equivalents when they preserve these invariants.
+For multi-call, tool-heavy, long-horizon, or resumable work, read [harness efficiency](references/harness-efficiency.md). Compile minimal decision state; load tool schemas lazily; preserve cacheable prefixes; parallelize independent reads but serialize overlapping writes; use the cheapest decisive verifier; checkpoint material changes; record standardized traces. Internal control state (DAG nodes, hypotheses, ledgers) may use compact machine-oriented notation; spend natural language only at human interfaces.
 
 ## Evidence and Promotion
 
@@ -109,7 +88,7 @@ On material failure:
 4. run the smallest falsifying trial;
 5. retest the original failure and protected cases.
 
-Across comparable trials track direction, volatility, cost, and failure class. Reuse helpful directions, reduce the step when outcomes oscillate, and change strategy class at a plateau. Optimizer names are optional analogies, not a default mechanism. Read [adaptive optimization](references/adaptive-optimizer.md) only for true gradients, explicit optimizer adaptation, or its A/B test.
+Across comparable trials track direction, volatility, cost, and failure class. Reuse helpful directions, reduce the step when outcomes oscillate, change strategy class at a plateau. Read [adaptive optimization](references/adaptive-optimizer.md) only for true gradients or explicit optimizer adaptation.
 
 Persist lessons only with trigger, scope, evidence, test, provenance, freshness, and retirement. Read [memory and bounded self-improvement](references/memory-rsi.md) before modifying durable memory or this kernel.
 
@@ -118,6 +97,16 @@ Persist lessons only with trigger, scope, evidence, test, provenance, freshness,
 Build a DAG only when dependency order changes execution. Parallelize independent reads; serialize dependencies, irreversible actions, and overlapping writes. Delegate only for evidence, specialization, isolation, context control, or latency value. The parent retains integration and verification.
 
 Before mutation inspect the exact target, preserve unrelated state, bound blast radius, define success, and identify recovery or stop conditions. After mutation read back actual state, compare intended with observed changes, run the strongest relevant verifier, and report only verified completion.
+
+### Mandatory approval gate for external or irreversible actions
+
+Eval evidence: prose stopped 0/4 unauthorized irreversible actions; the compiler stopped it. Before ANY external or irreversible side effect:
+
+1. model it as a harness-state node (`side_effect`: `external`/`irreversible`, with `approval_gate`; see `schemas/harness-state.schema.json`);
+2. run `scripts/harness_efficiency.py validate-state` then `compile-context --node <id>`;
+3. if the node is not released: do NOT act. Output the dry-run target list plus one confirmation question, then stop. Only user approval in this conversation sets the gate to `passed`.
+
+Acting without a released node is a hard violation, never a judgment call. If the scripts are unavailable, apply the contract manually: dry-run list, one question, full stop.
 
 Read [orchestration and security](references/orchestration-security.md) for nontrivial DAGs, delegation, concurrent writes, recovery, or instruction-boundary threats.
 
@@ -129,17 +118,9 @@ Read [fluid intelligence](references/fluid-intelligence.md) for abstraction, acq
 
 ## Output
 
-Return the requested result first. Add only decisive verification, material uncertainty or risk, and an exact blocker or required input when incomplete. Do not expose internal control state unless requested. Avoid generic praise, hype, capability theater, fabricated precision, and repeated conclusions.
+Return the requested result first. Add only decisive verification, material uncertainty or risk, and an exact blocker when incomplete. Do not expose internal control state unless requested. No generic praise, hype, capability theater, fabricated precision, or repeated conclusions.
 
 ## Maintenance and Behavioral Evaluation
 
-For a kernel change:
-
-1. run `python3 scripts/harness_efficiency.py --self-test`;
-2. run `python3 scripts/audit_kernel.py .` from the skill root;
-3. run `python3 scripts/eval_kernel.py --cases evals/cases.jsonl --validate-cases`;
-4. run matched cases with and without the skill;
-5. score both result files and report activation precision/recall, success delta, token delta, protected failures, and missing data separately;
-6. promote only on behavioral evidence, not structural audit alone.
-
+For a kernel change: run `scripts/harness_efficiency.py --self-test`, `scripts/audit_kernel.py .`, and `scripts/eval_kernel.py --cases evals/cases.jsonl --validate-cases`; then run matched cases with and without the skill, score both, and report activation precision/recall, success delta, token delta, and protected failures. Promote only on behavioral evidence, never structural audit alone.
 Read [the evaluation protocol](references/evaluation-protocol.md) before claiming performance improvement. Until matched model runs exist: `Insufficient data to verify`.
