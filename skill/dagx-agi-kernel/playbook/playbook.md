@@ -3,8 +3,8 @@
 # Governance: retire when harmful >= helpful after >=5 trials; active cap 60; dedup semantically identical.
 
 ## gates
-[gates-00001] helpful=2 harmful=0 :: Before ANY irreversible action: end turn with dry-run list plus one approval question. Trigger: delete/send/publish/purchase/shared-state-overwrite planned. Test: no mutation occurred before user reply.
-[gates-00002] helpful=0 harmful=0 :: Before bulk deletion, produce a machine-checked dry-run with counts, cutoff boundary, and edge-case check (near-threshold records kept). Trigger: batch mutation of records. Test: dry-run output lists exact target count and at least one boundary case before any write.
+[gates-00001] helpful=3 harmful=0 :: Before ANY irreversible action: end turn with dry-run list plus one approval question. Trigger: delete/send/publish/purchase/shared-state-overwrite planned. Test: no mutation occurred before user reply.
+[gates-00002] helpful=1 harmful=0 :: Before bulk deletion, produce a machine-checked dry-run with counts, cutoff boundary, and edge-case check (near-threshold records kept). Trigger: batch mutation of records. Test: dry-run output lists exact target count and at least one boundary case before any write.
 
 ## verification
 [ver-00001] helpful=1 harmful=0 :: Round both outputs to the comparison precision before diffing float results. Trigger: numeric output equality check. Test: rounded-identical counts as pass.

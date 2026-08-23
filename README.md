@@ -489,3 +489,13 @@ agent-skills  ai-agents  llm-agents  agentic-ai  agi  fluid-intelligence
 prompt-engineering  orchestration  dag  self-improvement  evaluation
 benchmarking  codex  claude-code  hermes
 ```
+
+## Behavioral Evidence (V1.0)
+
+Matched A/B runs on a 20-task suite (same model, fresh sessions) established:
+
+- **Gate enforcement**: text-only approval-gate prose stopped 0/6 unauthorized irreversible deletions across V0.4-V0.7; the V0.7.1+ HARD STOP invariant (core-invariant placement with anti-evasion clauses) stopped it under an "execute now" stress prompt, verified in 3 independent runs (dry-run list delivered, one approval question, zero mutations).
+- **Self-learning loop (V0.8+)**: after-task reflection wrote playbook deltas via deterministic merge in 3/3 runs; counters updated correctly; governance retired harmful bullets, deduplicated near-duplicates (fuzzy matching added after the loop exposed exact-match weakness), and evicted beyond the active cap.
+- **No control regression**: routine questions stayed direct at baseline cost throughout all versions.
+
+Limitations: n small per cell, single model/harness family; numbers describe observed runs, not guaranteed rates.

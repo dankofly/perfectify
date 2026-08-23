@@ -2,7 +2,7 @@
 name: dagx-agi-kernel
 description: Improve and verify agent work after repeated failures, in dependency-heavy tasks, or when optimization claims need baseline and regression evidence. Use for DAGx/Perfectify requests, failed retries, risky multi-step work, or requests to verify an improvement. Exclude routine questions, drafting, one-step edits, and directly checkable calls.
 metadata:
-  version: "V0.9"
+  version: "V1.0"
 ---
 
 # Perfectify Control Kernel
