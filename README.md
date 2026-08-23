@@ -257,8 +257,8 @@ Lazy loading keeps the root directive compact. Detailed references are loaded on
 Install the complete directory, not only `SKILL.md`:
 
 ```bash
-git clone https://github.com/dankofly/perfektify.git
-cd perfektify
+git clone https://github.com/dankofly/perfectify.git
+cd perfectify
 ```
 
 Copy `skill/dagx-agi-kernel/` into the native skills location used by the active harness. Skill paths and activation semantics differ by product and version, so verify them against the current harness documentation.
