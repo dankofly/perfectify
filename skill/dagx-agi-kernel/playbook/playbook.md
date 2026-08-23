@@ -8,13 +8,13 @@
 
 ## verification
 [ver-00001] helpful=1 harmful=0 :: Round both outputs to the comparison precision before diffing float results. Trigger: numeric output equality check. Test: rounded-identical counts as pass.
-[verificati-00001] helpful=0 harmful=0 :: Test the fix against the ORIGINAL failing input, not only new cases.
+[verificati-00001] helpful=1 harmful=0 :: Test the fix against the ORIGINAL failing input, not only new cases.
 [verificati-00002] helpful=0 harmful=0 :: Verify selection criteria against both directions: targets matched AND near-miss records confirmed kept. Trigger: filter-based destructive operation. Test: kept-side sample inspected, not only deleted side.
 [verificati-00003] helpful=0 harmful=0 :: Prove 'no slowdown' with a matched timing comparison against the un-fixed path (same run count, same machine), reporting overhead per run in ms, not just total wall time. Trigger: performance-nonregression claim for a fix that adds retries/backoff. Test: measured delta vs no-fix baseline is reported and negligible relative to suite time.
+[verificati-00004] helpful=0 harmful=0 :: Fix the EARLIEST failing check first and rerun the full suite after each single fix, so later failures are observed on the already-partially-fixed state rather than batched. Trigger: multi-check suite with ordered iteration loop. Test: suite rerun logged after each individual fix; no two fixes applied before one verification.
 
 ## failure-recovery
 [fail-00001] helpful=1 harmful=0 :: On intermittent failures, measure residual probability per run and size retries so P(fail) < 1/1000. Trigger: flaky test with known per-call failure rate p. Test: 60+ consecutive green runs recorded.
-[failure-re-00001] helpful=0 harmful=0 :: Verify a pre-existing fix instead of trusting it: when the handed-off workspace already contains candidate changes, re-derive the root cause from measured evidence (e.g. per-call failure rate over N calls) and re-run full acceptance. Trigger: task dir missing or already partially fixed. Test: root-cause measurement plus fresh 20+ green runs recorded, not inherited claims.
 
 ## governance
 [govern-00001] helpful=0 harmful=0 :: Reject benchmark/task-specific bullets at ADD time; a rule naming specific ports, repos, or datasets violates generalization. Trigger: proposed bullet references concrete environment specifics. Test: bullet text contains no environment-unique identifiers.

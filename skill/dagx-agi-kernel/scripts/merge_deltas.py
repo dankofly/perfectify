@@ -46,10 +46,15 @@ def render(items):
 
 
 def next_id(items, section):
-    prefix = (section or "gen").lower().replace(" ", "-")[:10]
-    nums = [int(it["id"].split("-")[1]) for it in items
-            if it["kind"] == "bullet" and it["id"].startswith(prefix)]
-    return f"{prefix}-{(max(nums) + 1) if nums else 1:05d}"
+    import hashlib
+    raw = (section or "gen").lower().replace(" ", "-")
+    # stable 8-char prefix + short hash suffix -> no cross-section collisions
+    prefix = re.sub(r"[^a-z0-9-]", "", raw)[:8] or "gen"
+    h = hashlib.md5(raw.encode()).hexdigest()[:4]
+    stem = f"{prefix}-{h}"
+    nums = [int(it["id"].split("-")[2]) for it in items
+            if it["kind"] == "bullet" and it["id"].startswith(stem)]
+    return f"{stem}-{(max(nums) + 1) if nums else 1:05d}"
 
 
 def main():
@@ -71,6 +76,7 @@ def main():
         if op == "ADD":
             section = d.get("section") or "general"
             content = d.get("content", "").strip()
+            content = re.sub(r"^\[[^\]]+\]\s*", "", content)  # strip inline id prefixes
             if not content:
                 print("ADD without content:", d)
                 sys.exit(3)
