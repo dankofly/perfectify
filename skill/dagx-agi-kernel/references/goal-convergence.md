@@ -8,74 +8,36 @@ Load this reference for `F2/F3`, repeated failure, open-ended tasks, autonomous 
 
 It is intentionally not described as universally unbeatable. No fixed optimizer dominates across every possible problem class, and many goals are uncomputable, undecidable, underspecified, inaccessible, or resource-limited. `PX` maximizes measured goal convergence under the actual task distribution, evidence, tools, authority, and budget.
 
-## 2. Machine State
+## 2. Working State
 
-Use internal compact state; do not expose private reasoning:
+Maintain only information that changes the next decision:
 
-```text
-PX/1 Ω={
-  G: authorized goal,
-  H: hard gates and protected invariants,
-  A: ordered observable acceptance vector,
-  N: novelty, priors, exposure, and task-specific experience contract,
-  L: acquisition curve and held-out transfer ledger,
-  K: verified knowns,
-  U: decision-relevant unknowns,
-  B: current problem/environment model,
-  Γ: feasible candidate frontier and archive,
-  C: best validated champion,
-  E: evidence and verifier state,
-  F: failure/attempt ledger,
-  M: scoped reusable memory candidates,
-  O: adaptive optimizer mode and moment state,
-  Z: resource state and stop conditions
-}
-```
+- authorized goal, hard gates, ordered acceptance, and protected behavior;
+- novelty, prior exposure, task-specific experience, and resource contract when relevant;
+- verified knowns, decision-relevant unknowns, and falsifiable hypotheses;
+- the current champion and feasible challengers;
+- observations, verifier results, failures, and scoped lessons;
+- used resources and stop conditions.
 
-`G`, `H`, and the priority order of `A` are locked against self-modification. Change them only through a higher-authority instruction or resolved user clarification.
+The goal, hard gates, and acceptance priority are locked against self-modification. Change them only through a higher-authority instruction or resolved user clarification. Formal field names are available in [formal-control-state.md](formal-control-state.md) only when an implementation needs them.
 
-## 3. Activation
+## 3. Activation and Baseline
 
-```text
-PX::ACTIVATE(T):
-  G,H,A <- CONTRACT(T)
-  N <- NOVELTY_PRIOR_EXPERIENCE_CONTRACT(T)
-  L <- EMPTY_ACQUISITION_TRANSFER_LEDGER()
-  K,U,B <- OBSERVE_CONTEXT()
-  C <- BASELINE_OR_EMPTY_CHAMPION()
-  Γ <- {C}
-  F,M <- ∅ or scoped trusted state
-  Z <- AUTHORIZED_BUDGET_AND_STOP_RULES()
-  O <- ROUTE_OPTIMIZER(A,E,F,Z)
-  return PX::CONVERGE(Ω)
-```
-
-If no explicit baseline exists, use the smallest valid current solution or the pre-change result. If acceptance cannot be observed, first create a task-fit verifier or state the verification gap; never substitute self-confidence.
+On activation, form the task contract, observe source-of-truth state, record the resource limit, and preserve the current valid result as champion. If no explicit baseline exists, use the smallest valid current solution or the pre-change result. If acceptance cannot be observed, first create a task-fit verifier or state the verification gap; never substitute self-confidence.
 
 ## 4. Convergence Loop
 
-```text
-PX::CONVERGE(Ω):
-  while not STOP(Ω):
-    gaps <- GAP(A,C,E)
-    unknowns <- INVALIDATING_UNKNOWNS(gaps,U)
-    Γ <- EXPAND(C,B,F,M,gaps,unknowns)
-    Γ <- FILTER_FEASIBLE(Γ,H,authority,resources)
-    Π <- PARETO_FRONTIER(Γ, progress,information,risk,reversibility,cost)
-    a <- SELECT_NEXT(Π)
-    o <- EXECUTE_MINIMUM_EXPERIMENT(a)
-    e <- OBSERVE_AND_VERIFY(o,A,H)
-    L <- RECORD_ACQUISITION_POINT(L,N,a,o,e,Z)
-    d <- ATTRIBUTED_DIRECTIONAL_EVIDENCE(C,a,e)
-    B,F,E,O <- UPDATE(B,F,E,O,a,o,e,d)
-    C <- PROMOTE_OR_PRESERVE(C,a,e)
-    M <- EXTRACT_SCOPED_LESSON(F,E)
-  return C,E,residual_gaps,stop_reason
-```
+For each cycle:
 
-Each cycle must produce new external evidence, reduce a decision-critical unknown, test a materially different strategy, or stop. Internal rewriting alone is not progress.
+1. identify the highest-priority unresolved gap or premise-killing unknown;
+2. generate only feasible actions that can close the gap or falsify a hypothesis;
+3. select the smallest safe action with the best evidence value;
+4. execute once, observe actual output, and apply the fixed verifier;
+5. record acceptance, protected behavior, resource use, and attribution;
+6. promote the challenger or preserve the champion;
+7. stop unless the next cycle adds external evidence or tests a materially different strategy.
 
-`O` may bias candidate generation and ordering only. It cannot bypass feasibility, Pareto comparison, verification, or promotion gates. If directional evidence is unavailable, incomparable, or unattributable, keep `O=PARETO_ONLY`. Read [adaptive optimizer](adaptive-optimizer.md) before updating moment state.
+Directional history may bias which challenger is tested next, but it cannot bypass feasibility, verification, or promotion gates. Read [adaptive-optimizer.md](adaptive-optimizer.md) only for explicit optimizer adaptation or its A/B evaluation.
 
 ## 5. Acceptance and Baseline
 

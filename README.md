@@ -1,6 +1,6 @@
 # Perfectify
 
-[![Version](https://img.shields.io/badge/version-V0.4-4f46e5)](#versioning)
+[![Version](https://img.shields.io/badge/version-V0.5-4f46e5)](#versioning)
 [![Agent Skill](https://img.shields.io/badge/type-Agent%20Skill-0f766e)](#installation)
 [![Status](https://img.shields.io/badge/status-experimental-c2410c)](#evidence-and-limitations)
 
@@ -8,9 +8,9 @@
 
 Most AI agents can retry. Few can determine whether a retry produced a better result, merely consumed more resources, or overfit the evaluator.
 
-**perfektify** is a portable control kernel for complex agentic work. It converts an authorized goal into observable acceptance criteria, selects the smallest sufficient execution strategy, preserves the best validated result, and promotes changes only when evidence shows an improvement without protected regressions.
+**Perfectify** is a portable control kernel for complex agentic work. It converts an authorized goal into observable acceptance criteria, selects the smallest sufficient execution strategy, preserves the best validated result, and promotes changes only when evidence shows an improvement without protected regressions.
 
-The project combines DAG-based orchestration, fluid-intelligence measurement, active abstraction, adaptive optimization, verification gates, failure recovery, scoped memory, and bounded recursive self-improvement in one Agent Skill.
+V0.5 combines selective activation, host-aware orchestration, failure recovery, verification gates, scoped learning, a 25-case activation corpus, and a deterministic baseline/candidate scorer in one Agent Skill package.
 
 It is designed for Codex and ChatGPT, Claude Code, Hermes, and other harnesses that support Agent Skills or an equivalent instruction-loading mechanism.
 
@@ -20,7 +20,7 @@ It is designed for Codex and ChatGPT, Claude Code, Hermes, and other harnesses t
 
 Common agent loops optimize activity instead of outcomes:
 
-| Weak control pattern | Consequence | perfektify control |
+| Weak control pattern | Consequence | Perfectify control |
 | --- | --- | --- |
 | Retry the same strategy | Repeated failure with higher cost | Change the premise, representation, decomposition, tool, or strategy class |
 | Optimize one score | Goodharting and hidden regressions | Hard gates plus an ordered acceptance vector |
@@ -34,17 +34,15 @@ Common agent loops optimize activity instead of outcomes:
 ## Root directive
 
 ```text
-Maximize verified skill-acquisition efficiency on the current authorized task.
-Infer the smallest decision-sufficient task model from the least task-specific
-evidence, solve the task, and test whether the acquired procedure transfers to
-materially different unseen cases. Minimize examples, actions, compute, time,
-coordination, and irreversible risk while preserving every hard gate and
-protected behavior.
+Reach the user's observable goal with the least sufficient work. Preserve the
+best verified result. Treat failures as evidence, change the strategy when a
+retry would repeat the same cause, and claim improvement only after comparison
+with a baseline and checks for protected regressions.
 ```
 
 This directive is operational, not metaphysical. It does not claim that a skill can create AGI, obtain root authority, guarantee convergence, or dominate every possible problem class.
 
-## What perfektify is
+## What Perfectify is
 
 - A portable `SKILL.md` control layer for nontrivial agent work.
 - An anytime convergence process that retains the strongest verified result found so far.
@@ -53,7 +51,7 @@ This directive is operational, not metaphysical. It does not claim that a skill 
 - A verifier-centered improvement loop with rollback and regression protection.
 - A harness-neutral architecture with lazy-loaded technical references.
 
-## What perfektify is not
+## What Perfectify is not
 
 - A foundation model, model checkpoint, training framework, or reinforcement-learning environment.
 - A replacement for the host harness, its permissions, policies, or approval system.
@@ -76,30 +74,15 @@ flowchart TD
 
 The loop terminates on verified acceptance, a missing authority or evidence dependency, evidence saturation, a dominated frontier, an environmental limit, or marginal value below cost or risk.
 
-### Activation state
+### Behavior-first execution
 
-```text
-PX::ACTIVATE[
-  G := AUTHORIZED_GOAL;
-  H := HARD_GATES;
-  A := OBSERVABLE_ACCEPTANCE_VECTOR;
-  N := NOVELTY_PRIOR_EXPERIENCE_CONTRACT;
-  L := ACQUISITION_TRANSFER_LEDGER;
-  C := BEST_VALIDATED_CHAMPION;
-  O := ADAPTIVE_OPTIMIZER_ROUTE;
-  Ω := MINIMUM_SUFFICIENT_SEARCH;
-  LOOP := OBSERVE>MODEL>FRONTIER>FILTER>SELECT>ACT>VERIFY>UPDATE>PROMOTE|ROLLBACK;
-  STOP := ACCEPT|BLOCKED|SATURATED|MARGINAL_VALUE<=COST_OR_RISK;
-]
-```
-
-The notation is a compact state-transition protocol for an LLM or agent harness. It is not intended as executable source code by itself.
+The root skill uses plain-language rules for activation, execution, failure handling, and promotion. Formal state notation is optional and isolated in `references/formal-control-state.md`; it is not loaded during ordinary work.
 
 ## Core systems
 
 ### 1. Risk and effort routing
 
-perfektify selects the cheapest mode capable of producing a reliable result:
+Perfectify selects the cheapest mode capable of producing a reliable result:
 
 | Mode | Trigger | Minimum execution path |
 | --- | --- | --- |
@@ -120,6 +103,8 @@ risk | write set | rollback | status
 ```
 
 Independent reads may run concurrently. Dependencies, irreversible actions, and overlapping writes remain serialized. The parent process retains integration and final verification responsibility.
+
+If the host harness already created a plan, DAG, subagents, retries, or approval flow, Perfectify adopts that structure. It adds only missing acceptance gates, champion preservation, failure diagnosis, and verification instead of constructing a competing orchestration layer.
 
 ### 3. Fluid-intelligence protocol
 
@@ -165,21 +150,18 @@ CONTAMINATION | RESOURCE_LIMIT
 
 An executable model remains a hypothesis. It is trusted only within verified coverage, and dependent action queues are invalidated after a prediction mismatch.
 
-### 5. Adaptive optimizer router
+### 5. Adaptive trial control
 
-Neural-network optimizers are adapted only where their control principles transfer legitimately.
+Ordinary agent tasks do not expose real gradients. V0.5 therefore uses a smaller observable rule:
 
-| Route | Use in agentic optimization |
-| --- | --- |
-| `PARETO_ONLY` | Default when trials are incomparable or attribution is insufficient |
-| `SGD_M` | Stable directional evidence across representative samples |
-| `RMS` | Sparse, nonstationary, coordinate-specific feedback volatility |
-| `ADAM` | Attributed direction and volatility are both measurable |
-| `ADAMW` | Adam-like adaptation plus independent decay of unsupported complexity |
-| `NADAM` | A cheap, faithful lookahead can evaluate a momentum-ahead candidate |
-| `AMS_GUARD` | Rare severe failures must remain visible beyond a short feedback window |
+1. change one attributable strategy coordinate when practical;
+2. record improvement, regression, no change, or unknown attribution;
+3. reuse directions only after repeated support;
+4. reduce the change when outcomes oscillate;
+5. switch strategy class at a plateau;
+6. retain rare severe failures as guards.
 
-True gradient equations are used only when a differentiable objective and real gradients exist. For normal agent tasks, textual feedback creates verified directional evidence, not a mathematical gradient.
+Adam, AdamW, RMSprop, SGD momentum, and Nadam remain in an optional research reference for true-gradient work or controlled A/B evaluation. They are not default agent-routing labels. Without matched behavioral results, no optimizer-inspired controller is claimed to outperform the simpler rule.
 
 ### 6. Evidence and promotion
 
@@ -209,7 +191,7 @@ The versioned champion remains available throughout self-modification. A rewrite
 
 ## Transfer ladder
 
-perfektify limits every generalization claim to the strongest completed evaluation rung:
+Perfectify limits every generalization claim to the strongest completed evaluation rung:
 
 | Rung | Evaluation | Supported conclusion |
 | --- | --- | --- |
@@ -240,15 +222,20 @@ The benchmark portfolio distinguishes static abstraction, interactive learning, 
 
 | Path | Purpose |
 | --- | --- |
-| `skill/dagx-agi-kernel/SKILL.md` | Portable root kernel, routing, invariants, state, execution, and output discipline |
+| `skill/dagx-agi-kernel/SKILL.md` | Sub-10 KB root with selective activation, invariants, execution, failure, and promotion rules |
 | `references/fluid-intelligence.md` | Novelty contract, acquisition curves, active abstraction, transfer, and AGI claim gates |
-| `references/goal-convergence.md` | Anytime search, trial ledger, plateau escape, champion preservation, and stopping rules |
-| `references/adaptive-optimizer.md` | Exact gradient boundary and optimizer-inspired agent control |
-| `references/verification-evals.md` | Evidence states, domain verifiers, Goodhart controls, promotion, and behavioral cases |
+| `references/goal-convergence.md` | Bounded search, plateau escape, champion preservation, and stopping rules |
+| `references/adaptive-optimizer.md` | Default trial control, exact gradient boundary, and optimizer A/B requirements |
+| `references/verification-evals.md` | Evidence states, domain verifiers, Goodhart controls, and promotion |
+| `references/evaluation-protocol.md` | Matched baseline/candidate design, result format, metrics, and claim boundaries |
+| `references/formal-control-state.md` | Optional state notation for adapters and evaluators, not ordinary execution |
 | `references/memory-rsi.md` | Scoped memory and bounded recursive self-improvement |
 | `references/orchestration-security.md` | DAG execution, delegation, concurrency, recovery, and instruction-boundary security |
 | `references/harness-adapters.md` | Codex/ChatGPT, Claude Code, Hermes, portability, and deployment semantics |
-| `scripts/audit_kernel.py` | Deterministic package audit |
+| `evals/cases.jsonl` | 10 activation cases, 10 negative controls, and 5 boundary cases |
+| `templates/trial-ledger.md` | Operational record for matched trials, evidence, costs, and promotion |
+| `scripts/audit_kernel.py` | Deterministic package and context-budget audit |
+| `scripts/eval_kernel.py` | Corpus validator and activation/success/token/regression scorer |
 
 Lazy loading keeps the root directive compact. Detailed references are loaded only when their trigger applies.
 
@@ -265,7 +252,7 @@ Copy `skill/dagx-agi-kernel/` into the native skills location used by the active
 
 ### Codex and ChatGPT
 
-Use the native Agent Skills mechanism. The skill description is selective so routine low-risk requests should remain direct while explicit DAGx, AGI, fluid-intelligence, orchestration, research-synthesis, repeated-failure, and measurable-optimization tasks can activate the kernel.
+Use the native Agent Skills mechanism. The description targets everyday failure modes: repeated failures, dependency-heavy work, measurable process improvement, baseline comparison, and regression protection. Routine questions, drafting, one-step edits, and directly checkable tool calls should remain direct.
 
 ### Claude Code
 
@@ -280,7 +267,7 @@ Install through the native skill mechanism supported by the active Hermes versio
 Explicit activation example:
 
 ```text
-Use the DAGx general-intelligence control kernel for this task.
+Use the Perfectify control kernel for this task.
 Define observable acceptance criteria, preserve the current champion,
 use the smallest evidence-producing process, and promote changes only
 after protected and held-out verification.
@@ -293,10 +280,9 @@ Definition of done: <observable acceptance conditions>
 Novel-task example:
 
 ```text
-Activate FI::ACQUIRE.
-Declare prior exposure and the task-specific experience budget.
-Infer the smallest decision-sufficient model, record the acquisition curve,
-and test the learned procedure on a materially different held-out case.
+Use Perfectify for a genuinely novel task.
+Declare prior exposure and the task-specific experience budget, record the
+path to acceptance, and test the learned procedure on a withheld case.
 
 Task: <novel problem or environment>
 Allowed evidence/actions: <budget>
@@ -307,14 +293,32 @@ The kernel may internally collapse simple tasks to `F0 DIRECT`. Explicit activat
 
 ## Validation
 
-Run the deterministic audit from the repository root:
+Validate package structure and the 10 KB root budget from the repository root:
 
 ```bash
 python3 skill/dagx-agi-kernel/scripts/audit_kernel.py \
   skill/dagx-agi-kernel
 ```
 
-The audit checks frontmatter, naming, package structure, placeholders, relative links, reference discoverability, root size, and the required maintenance script.
+Validate the 25-case behavioral corpus:
+
+```bash
+python3 skill/dagx-agi-kernel/scripts/eval_kernel.py \
+  --cases skill/dagx-agi-kernel/evals/cases.jsonl \
+  --validate-cases
+```
+
+Compare completed matched runs:
+
+```bash
+python3 skill/dagx-agi-kernel/scripts/eval_kernel.py \
+  --cases skill/dagx-agi-kernel/evals/cases.jsonl \
+  --baseline results/baseline.jsonl \
+  --candidate results/v0.5.jsonl \
+  --strict-completeness
+```
+
+The scorer reports activation precision/recall/specificity, paired task-success delta, token delta, protected failures, group results, and missing measurements separately.
 
 Expected successful status:
 
@@ -326,7 +330,7 @@ Expected successful status:
 }
 ```
 
-Structural validation does not prove a higher real-world task success rate. Behavioral claims require controlled evaluation with representative, boundary, adversarial, negative-control, and held-out cases.
+Corpus validation proves only that the evaluation files are structurally usable. A performance claim requires actual matched model runs, fixed graders, raw traces, representative cases, negative controls, boundaries, and unseen transfer cases.
 
 ## Evaluation dimensions
 
@@ -359,14 +363,17 @@ These papers support individual mechanisms and measurement principles. They do n
 
 ## Evidence and limitations
 
-Current release: `V0.4`
+Current release: `V0.5`
 
 Verified:
 
 - valid Agent Skill frontmatter and package name;
-- deterministic structural audit passes;
+- root `SKILL.md` is below the enforced 10,000-byte context budget;
+- deterministic package and corpus validation pass;
 - all internal references resolve;
 - every reference is discoverable from the root skill;
+- the versioned corpus contains 10 activation cases, 10 negative controls, and 5 boundary cases;
+- the scorer computes activation, paired success, token, regression, group, and missing-data metrics without a composite score;
 - protected baseline remains available through Git version history;
 - benchmark, transfer, attribution, and self-modification claim gates are encoded.
 
@@ -388,8 +395,9 @@ For unsupported general performance claims: `Insufficient data to verify`.
 | `V0.2` | Goal-convergence and bounded improvement controls |
 | `V0.3` | Adaptive optimizer routing and exact gradient boundary |
 | `V0.4` | Fluid-intelligence directive, acquisition curves, active abstraction, transfer ladder, and benchmark integrity |
+| `V0.5` | Behavior-first root under 10 KB, host-router precedence, 25-case activation corpus, trial ledger, and matched-run scorer |
 
-Version tags preserve validated champions and provide explicit rollback points.
+Versioned Git history preserves prior champions and provides rollback points.
 
 ## Contributing
 
@@ -409,7 +417,7 @@ Changes that only increase prompt length, weaken evaluation, hide failures, or m
 
 **GitHub description**
 
-> Evidence-gated Agent Skill for measurable skill acquisition, DAG orchestration, adaptive optimization, and bounded self-improvement.
+> Evidence-gated Agent Skill with a behavioral eval harness for repeated failures, measurable improvement, regression control, and efficient orchestration.
 
 **Suggested topics**
 

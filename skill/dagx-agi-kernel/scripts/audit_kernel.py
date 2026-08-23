@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 
@@ -20,6 +21,8 @@ ALLOWED_TOP_LEVEL = {
     "metadata",
     "allowed-tools",
 }
+MAX_ROOT_BYTES = 10_000
+EXPECTED_EVAL_GROUPS = {"activate": 10, "negative_control": 10, "boundary": 5}
 
 
 def parse_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
@@ -76,15 +79,26 @@ def main() -> int:
         errors.append("description length must be 1..1024 characters")
 
     root_lines = len(text.splitlines())
+    root_bytes = len(text.encode("utf-8"))
     if root_lines > 500:
         warnings.append("SKILL.md exceeds the recommended 500 lines")
+    if root_bytes > MAX_ROOT_BYTES:
+        errors.append(
+            f"SKILL.md exceeds the {MAX_ROOT_BYTES}-byte context budget: {root_bytes}"
+        )
     if PLACEHOLDER_RE.search(text):
         errors.append("unfinished scaffold placeholder found in SKILL.md")
     if "—" in text:
         warnings.append("long em dash found")
+    if "PX::ACTIVATE" in text or "arglexmax" in text:
+        errors.append("formal control notation must remain outside SKILL.md")
 
     markdown_files = sorted(root.rglob("*.md"))
-    package_files = sorted(path for path in root.rglob("*") if path.is_file())
+    package_files = sorted(
+        path
+        for path in root.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+    )
     checked_links = 0
     root_relative_targets: set[Path] = set()
     for source in markdown_files:
@@ -118,19 +132,74 @@ def main() -> int:
     if not audit_script.is_file():
         errors.append("required maintenance audit is missing: scripts/audit_kernel.py")
 
+    required_runtime_files = [
+        root / "scripts" / "eval_kernel.py",
+        root / "evals" / "cases.jsonl",
+        root / "templates" / "trial-ledger.md",
+        root / "references" / "evaluation-protocol.md",
+        root / "references" / "formal-control-state.md",
+    ]
+    for required in required_runtime_files:
+        if not required.is_file():
+            errors.append(f"required V0.5 file is missing: {required.relative_to(root)}")
+
+    for executable in (audit_script, root / "scripts" / "eval_kernel.py"):
+        if executable.is_file() and executable.stat().st_mode & 0o111 == 0:
+            errors.append(f"required script is not executable: {executable.relative_to(root)}")
+
+    eval_cases = 0
+    eval_groups: Counter[str] = Counter()
+    eval_ids: set[str] = set()
+    eval_file = root / "evals" / "cases.jsonl"
+    if eval_file.is_file():
+        for line_number, line in enumerate(
+            eval_file.read_text(encoding="utf-8").splitlines(), 1
+        ):
+            if not line.strip():
+                continue
+            try:
+                case = json.loads(line)
+            except json.JSONDecodeError as exc:
+                errors.append(
+                    f"invalid eval JSON at evals/cases.jsonl:{line_number}: {exc.msg}"
+                )
+                continue
+            eval_cases += 1
+            case_id = case.get("id")
+            if not isinstance(case_id, str) or not case_id:
+                errors.append(f"missing eval id at evals/cases.jsonl:{line_number}")
+            elif case_id in eval_ids:
+                errors.append(f"duplicate eval id at evals/cases.jsonl:{line_number}: {case_id}")
+            else:
+                eval_ids.add(case_id)
+            group = case.get("group")
+            if isinstance(group, str):
+                eval_groups[group] += 1
+        if eval_cases != sum(EXPECTED_EVAL_GROUPS.values()):
+            errors.append(
+                f"expected {sum(EXPECTED_EVAL_GROUPS.values())} eval cases, found {eval_cases}"
+            )
+        if dict(eval_groups) != EXPECTED_EVAL_GROUPS:
+            errors.append(
+                f"expected eval groups {EXPECTED_EVAL_GROUPS}, found {dict(eval_groups)}"
+            )
+
     if (root / "README.md").exists():
         warnings.append("README.md is not needed for an Agent Skill package")
 
     metrics = {
         "root_lines": root_lines,
         "root_words": len(text.split()),
-        "root_bytes": len(text.encode("utf-8")),
+        "root_bytes": root_bytes,
+        "root_byte_limit": MAX_ROOT_BYTES,
         "markdown_files": len(markdown_files),
         "package_files": len(package_files),
         "package_bytes": sum(path.stat().st_size for path in package_files),
         "checked_relative_links": checked_links,
         "references": len(references),
         "orphan_references": len(orphan_references),
+        "eval_cases": eval_cases,
+        "eval_groups": dict(eval_groups),
     }
     result = {
         "status": "failed" if errors else "passed_with_warnings" if warnings else "passed",

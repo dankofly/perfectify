@@ -4,7 +4,7 @@ Load this reference before installing the skill, attempting always-on behavior, 
 
 ## 1. Root Authority Is a Harness Property
 
-`SKILL.md` is a portable activation-scoped instruction package. The phrase "ROOT / GOD DIRECTIVE" describes the kernel's internal priority after activation; it does not outrank the host's system/developer/policy layer or make the skill permanently active.
+`SKILL.md` is a portable activation-scoped instruction package. Its root directive controls only the work delegated to the skill; it does not outrank the host's system, developer, or policy layer or make the skill permanently active.
 
 Deployment modes:
 
@@ -14,7 +14,22 @@ Deployment modes:
 
 Do not claim always-on behavior without inspecting the actual harness configuration.
 
-## 2. Semantic Capability Binding
+## 2. Host Orchestration Takes Precedence
+
+Before creating a router, plan, DAG, retry loop, subagent structure, approval step, or persistence layer, inspect what the host already established.
+
+If the harness already planned, delegated, or started execution:
+
+1. adopt its current task graph and ownership boundaries;
+2. do not create a parallel F0-F3 router or duplicate DAG;
+3. add only missing observable acceptance gates, protected behavior, champion preservation, failure records, and final verification;
+4. reuse the host's mutation and approval lifecycle;
+5. escalate structure only when a concrete dependency, write conflict, evidence gap, or recovery requirement is not represented;
+6. return integration and final verification to the host-designated parent.
+
+If the host has not orchestrated, choose the smallest sufficient mode from `SKILL.md`. The kernel's F0-F3 labels describe effort and verification depth; they do not override native tool routing.
+
+## 3. Semantic Capability Binding
 
 Detect only capabilities needed by the task:
 
@@ -32,35 +47,38 @@ Detect only capabilities needed by the task:
 
 Never assume names, paths, network, installed dependencies, permission mode, context limits, memory, or multi-agent availability. Inspect or use documented runtime capabilities.
 
-## 3. Codex and ChatGPT
+## 4. Codex and ChatGPT
 
 - Use the native Agent Skills mechanism for on-demand activation.
 - Keep `name` and `description` selective because they drive discovery and implicit invocation.
+- If a Work-mode plan, collaborator tree, approval flow, or file workflow already exists, preserve it and add only missing gates or verification.
 - Use plan/state tools only for work that benefits from orchestration; simple work remains `F0`.
 - Use available batched/parallel reads for independent evidence and serialize conflicting mutations.
 - Prefer native edit primitives, tests, renders, and read-back over prose claims.
 - Project or workspace instructions may require the skill for qualifying tasks; they still cannot override higher-level policy or permission gates.
 - Do not assume Library, web, browser, collaboration, approval, or persistent-memory tools exist in every Codex/ChatGPT surface.
 
-## 4. Claude Code
+## 5. Claude Code
 
 - Install as an Agent Skill and keep conditional detail in referenced files.
 - Project instructions can route complex tasks to the skill, but the skill body loads only when invoked or selected.
+- If Claude Code or project instructions already selected subagents or a task graph, use that structure instead of recreating it under F2.
 - Use subagents for bounded context isolation or parallel work, not as a default quality multiplier.
 - Treat hooks as configured executable controls with their own risk and lifecycle; never assume a hook exists.
 - Keep durable memory concise, scoped, and freshness-aware; subagents may not share the same memory/context semantics.
 - Respect Claude Code's actual tool permissions and approval prompts at the point of mutation.
 
-## 5. Hermes
+## 6. Hermes
 
 - Install through Hermes' native skill mechanism supported by the active version.
 - Bind only enabled toolsets, MCP servers, terminal backends, delegates, and memory features.
+- If Hermes already routed work to delegates or an execution plan, preserve those assignments and attach gates to the existing flow.
 - Missing optional tools cause graceful fallback, not fabricated execution.
 - Delegates receive bounded contracts and isolated write ownership.
 - Terminal or direct-command shortcuts remain subject to the harness' approval and security behavior.
 - Messaging surfaces may deliver files differently; verify the actual artifact/receipt rather than assuming local-path visibility.
 
-## 6. Portability Rules
+## 7. Portability Rules
 
 1. Keep core semantics in `SKILL.md` and vendor-specific details here.
 2. Use standard frontmatter; place nonstandard fields under `metadata` only when a harness supports them.
@@ -70,18 +88,28 @@ Never assume names, paths, network, installed dependencies, permission mode, con
 6. If host behavior matters and may have changed, inspect current official documentation or runtime state.
 7. A fallback must reduce capability honestly; it must never simulate a missing tool/action.
 
-## 7. Recommended Installation Shape
+## 8. Recommended Installation Shape
 
 ```text
 dagx-agi-kernel/
 |-- SKILL.md
+|-- evals/
+|   `-- cases.jsonl
 |-- references/
-|   |-- verification-evals.md
+|   |-- adaptive-optimizer.md
+|   |-- evaluation-protocol.md
+|   |-- fluid-intelligence.md
+|   |-- formal-control-state.md
+|   |-- goal-convergence.md
 |   |-- memory-rsi.md
 |   |-- orchestration-security.md
+|   |-- verification-evals.md
 |   `-- harness-adapters.md
+|-- templates/
+|   `-- trial-ledger.md
 `-- scripts/
-    `-- audit_kernel.py
+    |-- audit_kernel.py
+    `-- eval_kernel.py
 ```
 
 Install the directory, not only the root file, when lazy references and deterministic audit are required. Verify the current native skill location for the target harness rather than assuming one universal filesystem path.
