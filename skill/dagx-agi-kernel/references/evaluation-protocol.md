@@ -72,7 +72,7 @@ Score a candidate run:
 ```bash
 python3 scripts/eval_kernel.py \
   --cases evals/cases.jsonl \
-  --candidate results/v0.5.jsonl
+  --candidate results/v0.6.jsonl
 ```
 
 Compare matched baseline and candidate runs:
@@ -81,7 +81,7 @@ Compare matched baseline and candidate runs:
 python3 scripts/eval_kernel.py \
   --cases evals/cases.jsonl \
   --baseline results/baseline.jsonl \
-  --candidate results/v0.5.jsonl \
+  --candidate results/v0.6.jsonl \
   --strict-completeness
 ```
 

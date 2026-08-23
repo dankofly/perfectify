@@ -1,0 +1,152 @@
+{
+  "schema_version": "1",
+  "task_id": "perfectify-example",
+  "goal": "Update README and prove that its validation passes",
+  "acceptance_gates": [
+    {
+      "id": "g-tests",
+      "priority": 1,
+      "condition": "README validation passes after the update",
+      "status": "pending"
+    }
+  ],
+  "protected_behaviors": [
+    "Preserve existing installation instructions"
+  ],
+  "authority": {
+    "read_scopes": ["repo"],
+    "write_scopes": ["repo"],
+    "external_actions": false
+  },
+  "budget": {
+    "input_tokens": 8000,
+    "output_tokens": 2000,
+    "tool_calls": 12,
+    "wall_time_ms": 120000,
+    "cost": null
+  },
+  "stable_context_refs": [
+    {
+      "id": "perfectify-v0.6",
+      "uri": "inline://empty-stable-context-example",
+      "digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "tool_index": [
+    {
+      "id": "repo.read",
+      "summary": "Read a repository file",
+      "schema_ref": "tool-schema://repo.read"
+    },
+    {
+      "id": "repo.patch",
+      "summary": "Apply a scoped patch to a repository file",
+      "schema_ref": "tool-schema://repo.patch",
+      "schema": {
+        "type": "object",
+        "required": ["path", "patch"],
+        "properties": {
+          "path": {"type": "string"},
+          "patch": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "knowns": [
+    {
+      "id": "k-baseline",
+      "claim": "The current README is the preserved champion",
+      "evidence_refs": ["e-baseline"]
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "u-validation",
+      "question": "Will validation pass after the patch?",
+      "blocks": ["n-update"]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "e-baseline",
+      "kind": "git-blob",
+      "artifact_ref": "repo:README.md@baseline",
+      "digest": null,
+      "freshness": "observed before n-inspect"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n-inspect",
+      "objective": "Inspect the baseline README",
+      "deps": [],
+      "status": "completed",
+      "model_class": "none",
+      "escalation_conditions": [],
+      "tool_refs": ["repo.read"],
+      "input_refs": ["k-baseline"],
+      "expected_evidence": ["Current README contents"],
+      "write_set": [],
+      "side_effect": "read",
+      "idempotency_key": null,
+      "approval_gate": null,
+      "readback_required": false,
+      "recovery_ref": null,
+      "verifier": {
+        "kind": "deterministic",
+        "ref": "sha256"
+      },
+      "result_ref": "result://n-inspect",
+      "budget": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "tool_calls": 1,
+        "wall_time_ms": 5000,
+        "cost": 0
+      }
+    },
+    {
+      "id": "n-update",
+      "objective": "Patch README and validate the result",
+      "deps": ["n-inspect"],
+      "status": "ready",
+      "model_class": "small",
+      "escalation_conditions": [
+        "Deterministic validation fails after one causal repair"
+      ],
+      "tool_refs": ["repo.patch"],
+      "input_refs": ["k-baseline", "u-validation"],
+      "expected_evidence": ["Patch diff", "Validation exit code", "README read-back"],
+      "write_set": ["repo:README.md"],
+      "side_effect": "reversible_write",
+      "idempotency_key": "perfectify-example-readme-v1",
+      "approval_gate": null,
+      "readback_required": true,
+      "recovery_ref": "git:baseline-blob",
+      "verifier": {
+        "kind": "deterministic",
+        "ref": "command://validate-readme"
+      },
+      "result_ref": null,
+      "budget": {
+        "input_tokens": 4000,
+        "output_tokens": 1000,
+        "tool_calls": 5,
+        "wall_time_ms": 60000,
+        "cost": null
+      }
+    }
+  ],
+  "champion": {
+    "artifact_ref": "repo:README.md@baseline",
+    "verified_gate_ids": []
+  },
+  "checkpoint": {
+    "completed_nodes": ["n-inspect"],
+    "state_digest": null,
+    "next_safe_node": "n-update",
+    "attempted_idempotency_keys": []
+  },
+  "active_node": "n-update"
+}

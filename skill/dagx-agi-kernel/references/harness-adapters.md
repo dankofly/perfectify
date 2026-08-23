@@ -29,7 +29,24 @@ If the harness already planned, delegated, or started execution:
 
 If the host has not orchestrated, choose the smallest sufficient mode from `SKILL.md`. The kernel's F0-F3 labels describe effort and verification depth; they do not override native tool routing.
 
-## 3. Semantic Capability Binding
+## 3. Runtime Contract Adoption
+
+Use `harness-state.schema.json` and `trace-event.schema.json` as semantic contracts, not mandatory duplicate storage. Before starting the reference runtime, map host-native facilities:
+
+| Perfectify contract | Adopt host-native equivalent when it preserves |
+| --- | --- |
+| decision state | gates, protected behavior, dependencies, authority, evidence, champion, checkpoint |
+| tool index | compact discovery followed by schema loading only for selected tools |
+| stable prefix key | byte-stable reusable context separated from volatile task state |
+| execution waves | dependency order and disjoint write ownership |
+| side-effect gate | approval, idempotency, recovery, read-back, and actual result |
+| trace event | task/node correlation, resources, retries, verification, protected failures, terminal result |
+
+If the harness already supplies a planner, compile its graph into the contract only for validation; do not plan again. If it already supplies context caching, retain its cache key and record it rather than creating a competing cache. If it already emits OpenTelemetry spans, add missing Perfectify attributes to those spans rather than maintaining a second trace stream.
+
+Use `scripts/harness_efficiency.py` when the host lacks an equivalent validator, compiler, or analyzer. Provider routing thresholds, concurrency limits, cache lifetimes, and timeout values must come from observed host telemetry or explicit configuration. The portable skill defines no universal values.
+
+## 4. Semantic Capability Binding
 
 Detect only capabilities needed by the task:
 
@@ -47,7 +64,7 @@ Detect only capabilities needed by the task:
 
 Never assume names, paths, network, installed dependencies, permission mode, context limits, memory, or multi-agent availability. Inspect or use documented runtime capabilities.
 
-## 4. Codex and ChatGPT
+## 5. Codex and ChatGPT
 
 - Use the native Agent Skills mechanism for on-demand activation.
 - Keep `name` and `description` selective because they drive discovery and implicit invocation.
@@ -58,7 +75,7 @@ Never assume names, paths, network, installed dependencies, permission mode, con
 - Project or workspace instructions may require the skill for qualifying tasks; they still cannot override higher-level policy or permission gates.
 - Do not assume Library, web, browser, collaboration, approval, or persistent-memory tools exist in every Codex/ChatGPT surface.
 
-## 5. Claude Code
+## 6. Claude Code
 
 - Install as an Agent Skill and keep conditional detail in referenced files.
 - Project instructions can route complex tasks to the skill, but the skill body loads only when invoked or selected.
@@ -68,7 +85,7 @@ Never assume names, paths, network, installed dependencies, permission mode, con
 - Keep durable memory concise, scoped, and freshness-aware; subagents may not share the same memory/context semantics.
 - Respect Claude Code's actual tool permissions and approval prompts at the point of mutation.
 
-## 6. Hermes
+## 7. Hermes
 
 - Install through Hermes' native skill mechanism supported by the active version.
 - Bind only enabled toolsets, MCP servers, terminal backends, delegates, and memory features.
@@ -78,7 +95,7 @@ Never assume names, paths, network, installed dependencies, permission mode, con
 - Terminal or direct-command shortcuts remain subject to the harness' approval and security behavior.
 - Messaging surfaces may deliver files differently; verify the actual artifact/receipt rather than assuming local-path visibility.
 
-## 7. Portability Rules
+## 8. Portability Rules
 
 1. Keep core semantics in `SKILL.md` and vendor-specific details here.
 2. Use standard frontmatter; place nonstandard fields under `metadata` only when a harness supports them.
@@ -88,7 +105,7 @@ Never assume names, paths, network, installed dependencies, permission mode, con
 6. If host behavior matters and may have changed, inspect current official documentation or runtime state.
 7. A fallback must reduce capability honestly; it must never simulate a missing tool/action.
 
-## 8. Recommended Installation Shape
+## 9. Recommended Installation Shape
 
 ```text
 dagx-agi-kernel/
@@ -101,15 +118,20 @@ dagx-agi-kernel/
 |   |-- fluid-intelligence.md
 |   |-- formal-control-state.md
 |   |-- goal-convergence.md
+|   |-- harness-efficiency.md
 |   |-- memory-rsi.md
 |   |-- orchestration-security.md
 |   |-- verification-evals.md
 |   `-- harness-adapters.md
+|-- schemas/
+|   |-- harness-state.schema.json
+|   `-- trace-event.schema.json
 |-- templates/
 |   `-- trial-ledger.md
 `-- scripts/
     |-- audit_kernel.py
-    `-- eval_kernel.py
+    |-- eval_kernel.py
+    `-- harness_efficiency.py
 ```
 
 Install the directory, not only the root file, when lazy references and deterministic audit are required. Verify the current native skill location for the target harness rather than assuming one universal filesystem path.

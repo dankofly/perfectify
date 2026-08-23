@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dankofly/perfectify/blob/main/skill/dagx-agi-kernel/schemas/trace-event.schema.json",
+  "title": "Perfectify Harness Trace Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "timestamp", "task_id", "node_id", "attempt", "model", "model_class",
+    "input_tokens", "cached_input_tokens", "output_tokens", "tool_calls", "tool_latency_ms",
+    "model_latency_ms", "wall_time_ms", "retry_count", "activated", "verifier_result",
+    "protected_failures", "rollback", "success", "terminal", "stop_reason"
+  ],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "trace_id": {"type": ["string", "null"]},
+    "span_id": {"type": ["string", "null"]},
+    "task_id": {"type": "string", "minLength": 1},
+    "node_id": {"type": "string", "minLength": 1},
+    "attempt": {"type": "integer", "minimum": 1},
+    "model": {"type": ["string", "null"]},
+    "model_class": {"enum": ["none", "small", "medium", "strong"]},
+    "input_tokens": {"type": ["integer", "null"], "minimum": 0},
+    "cached_input_tokens": {"type": ["integer", "null"], "minimum": 0},
+    "output_tokens": {"type": ["integer", "null"], "minimum": 0},
+    "tool_calls": {"type": ["integer", "null"], "minimum": 0},
+    "tool_latency_ms": {"type": ["number", "null"], "minimum": 0},
+    "model_latency_ms": {"type": ["number", "null"], "minimum": 0},
+    "wall_time_ms": {"type": ["number", "null"], "minimum": 0},
+    "cost": {"type": ["number", "null"], "minimum": 0},
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Retries caused since the preceding event, not a cumulative attempt number."
+    },
+    "activated": {"type": "boolean"},
+    "verifier_result": {"enum": ["pass", "fail", "inconclusive", "not_run"]},
+    "protected_failures": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "rollback": {"type": "boolean"},
+    "success": {"type": "boolean"},
+    "terminal": {"type": "boolean"},
+    "stop_reason": {"type": ["string", "null"]}
+  }
+}

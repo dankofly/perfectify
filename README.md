@@ -1,6 +1,6 @@
 # Perfectify
 
-[![Version](https://img.shields.io/badge/version-V0.5-4f46e5)](#versioning)
+[![Version](https://img.shields.io/badge/version-V0.6-4f46e5)](#versioning)
 [![Agent Skill](https://img.shields.io/badge/type-Agent%20Skill-0f766e)](#installation)
 [![Status](https://img.shields.io/badge/status-experimental-c2410c)](#evidence-and-limitations)
 
@@ -10,7 +10,7 @@ Most AI agents can retry. Few can determine whether a retry produced a better re
 
 **Perfectify** is a portable control kernel for complex agentic work. It converts an authorized goal into observable acceptance criteria, selects the smallest sufficient execution strategy, preserves the best validated result, and promotes changes only when evidence shows an improvement without protected regressions.
 
-V0.5 combines selective activation, host-aware orchestration, failure recovery, verification gates, scoped learning, a 25-case activation corpus, and a deterministic baseline/candidate scorer in one Agent Skill package.
+V0.6 adds an executable harness-efficiency runtime: decision-state compilation, progressive tool loading, stable-prefix cache keys, DAG and write-conflict validation, side-effect gates, checkpoints, standardized traces, and resource analysis. Selective activation, failure recovery, verification gates, scoped learning, and the 25-case behavioral corpus remain intact.
 
 It is designed for Codex and ChatGPT, Claude Code, Hermes, and other harnesses that support Agent Skills or an equivalent instruction-loading mechanism.
 
@@ -30,6 +30,9 @@ Common agent loops optimize activity instead of outcomes:
 | Report only final accuracy | Brute force looks like intelligence | Measure the acquisition curve and complete resource vector |
 | Tune on a public benchmark | Local overfitting is presented as generality | Require held-out transfer and protocol-complete attribution |
 | Add more agents by default | Coordination cost exceeds evidence value | Delegate only for specialization, isolation, evidence, or latency value |
+| Replay the full transcript | Irrelevant tokens dilute decisions and defeat prefix reuse | Compile the minimal state required by the active node |
+| Inject every tool schema | Discovery cost is paid on every call | Keep a compact index and load selected schemas lazily |
+| Retry an external write after a timeout | Duplicate or conflicting side effects | Preserve idempotency, read back, and recover before retrying |
 
 ## Root directive
 
@@ -49,6 +52,7 @@ This directive is operational, not metaphysical. It does not claim that a skill 
 - A risk and effort router that avoids unnecessary orchestration on routine tasks.
 - A measurement protocol for task-specific learning efficiency and transfer.
 - A verifier-centered improvement loop with rollback and regression protection.
+- A deterministic reference runtime for state validation, minimal context compilation, cache identity, and trace analysis.
 - A harness-neutral architecture with lazy-loaded technical references.
 
 ## What Perfectify is not
@@ -95,18 +99,43 @@ Risk is classified independently from effort. High-stakes information demands st
 
 ### 2. DAG orchestration
 
-A dependency graph is created only when it changes execution. Each node can record:
+A dependency graph is created only when it changes execution. Each node records an executable contract:
 
 ```text
-id | objective | dependencies | action/tool | expected evidence |
-risk | write set | rollback | status
+id | objective | dependencies | model class | tool/input refs |
+expected evidence | write set | side effect | idempotency |
+approval | read-back | recovery | verifier | budget | status
 ```
 
 Independent reads may run concurrently. Dependencies, irreversible actions, and overlapping writes remain serialized. The parent process retains integration and final verification responsibility.
 
 If the host harness already created a plan, DAG, subagents, retries, or approval flow, Perfectify adopts that structure. It adds only missing acceptance gates, champion preservation, failure diagnosis, and verification instead of constructing a competing orchestration layer.
 
-### 3. Fluid-intelligence protocol
+### 3. Harness-efficiency runtime
+
+V0.6 compiles decisions instead of replaying transcripts. The runtime validates a provider-neutral state graph and produces two separate inputs:
+
+```text
+stable prefix = kernel/policy references + selected tool schema references
+task delta    = active node + unresolved gates + referenced evidence + budget
+```
+
+The compiler emits deterministic SHA-256 identities for both parts. A stable identity proves input equivalence, not a provider cache hit. Actual cache utilization must come from traces.
+
+The validator rejects:
+
+- duplicate or unresolved identifiers;
+- missing dependencies and dependency cycles;
+- unordered nodes with overlapping write sets;
+- tool or evidence references that do not exist;
+- external or irreversible operations without authority, approval, idempotency, recovery, and read-back;
+- malformed or negative resource measurements.
+
+Topological execution waves expose safe concurrency. Independent reads can run in the same wave; writes with shared targets require a dependency edge. Model class is selected per node and may be `none` for deterministic work. No universal routing threshold, timeout, cache lifetime, or concurrency limit is invented.
+
+JSONL traces keep success, protected failures, token use, cache reads, tool and model latency, retries, rollback, terminal state, and cost separate. The analyzer reports missing measurements explicitly and never hides hard failures inside a composite score.
+
+### 4. Fluid-intelligence protocol
 
 The kernel operationalizes fluid intelligence as efficient acquisition of task-relevant skill relative to declared priors, exposure, task-specific experience, generalization difficulty, tools, resources, and assistance.
 
@@ -129,7 +158,7 @@ b = <examples, actions, attempts, tokens, compute, wall time,
 
 Incomparable resource dimensions are not compressed into invented weights. Challengers are evaluated by hard gates, ordered acceptance criteria, matched budgets, and Pareto dominance.
 
-### 4. Active abstraction
+### 5. Active abstraction
 
 Unknown environments use a bounded hypothesis-and-test cycle:
 
@@ -150,9 +179,9 @@ CONTAMINATION | RESOURCE_LIMIT
 
 An executable model remains a hypothesis. It is trusted only within verified coverage, and dependent action queues are invalidated after a prediction mismatch.
 
-### 5. Adaptive trial control
+### 6. Adaptive trial control
 
-Ordinary agent tasks do not expose real gradients. V0.5 therefore uses a smaller observable rule:
+Ordinary agent tasks do not expose real gradients. Perfectify therefore uses a smaller observable rule:
 
 1. change one attributable strategy coordinate when practical;
 2. record improvement, regression, no change, or unknown attribution;
@@ -163,7 +192,7 @@ Ordinary agent tasks do not expose real gradients. V0.5 therefore uses a smaller
 
 Adam, AdamW, RMSprop, SGD momentum, and Nadam remain in an optional research reference for true-gradient work or controlled A/B evaluation. They are not default agent-routing labels. Without matched behavioral results, no optimizer-inspired controller is claimed to outperform the simpler rule.
 
-### 6. Evidence and promotion
+### 7. Evidence and promotion
 
 Every acceptance-critical claim can be represented as:
 
@@ -183,7 +212,7 @@ A challenger is promoted only when:
 5. transfer is tested before a general-capability claim;
 6. added complexity is justified by measurable value.
 
-### 7. Memory and bounded self-improvement
+### 8. Memory and bounded self-improvement
 
 Reusable learning is stored only with scope, evidence, provenance, freshness, a detector, and a retirement condition. Transcript accumulation, unsupported speculation, self-preservation, privilege expansion, policy evasion, autonomous replication, and evaluator manipulation are outside the allowed improvement space.
 
@@ -232,10 +261,16 @@ The benchmark portfolio distinguishes static abstraction, interactive learning, 
 | `references/memory-rsi.md` | Scoped memory and bounded recursive self-improvement |
 | `references/orchestration-security.md` | DAG execution, delegation, concurrency, recovery, and instruction-boundary security |
 | `references/harness-adapters.md` | Codex/ChatGPT, Claude Code, Hermes, portability, and deployment semantics |
+| `references/harness-efficiency.md` | Decision-state compilation, progressive tools, caching, routing, side-effect safety, checkpoints, and telemetry |
+| `schemas/harness-state.schema.json` | Provider-neutral task, graph, authority, evidence, budget, and checkpoint contract |
+| `schemas/trace-event.schema.json` | Per-attempt resource, verification, failure, rollback, and terminal-event contract |
+| `examples/harness-state.example.json` | Valid two-node state for validation and context-compilation smoke tests |
+| `examples/traces.example.jsonl` | Valid measured/unmeasured trace mix for analyzer smoke tests |
 | `evals/cases.jsonl` | 10 activation cases, 10 negative controls, and 5 boundary cases |
 | `templates/trial-ledger.md` | Operational record for matched trials, evidence, costs, and promotion |
 | `scripts/audit_kernel.py` | Deterministic package and context-budget audit |
 | `scripts/eval_kernel.py` | Corpus validator and activation/success/token/regression scorer |
+| `scripts/harness_efficiency.py` | State validator, context compiler, plan-safety checker, trace analyzer, and self-tests |
 
 Lazy loading keeps the root directive compact. Detailed references are loaded only when their trigger applies.
 
@@ -293,7 +328,13 @@ The kernel may internally collapse simple tasks to `F0 DIRECT`. Explicit activat
 
 ## Validation
 
-Validate package structure and the 10 KB root budget from the repository root:
+Run the deterministic runtime tests:
+
+```bash
+python3 skill/dagx-agi-kernel/scripts/harness_efficiency.py --self-test
+```
+
+Validate package structure, schemas, runtime behavior, and the 10 KB root budget:
 
 ```bash
 python3 skill/dagx-agi-kernel/scripts/audit_kernel.py \
@@ -314,8 +355,20 @@ Compare completed matched runs:
 python3 skill/dagx-agi-kernel/scripts/eval_kernel.py \
   --cases skill/dagx-agi-kernel/evals/cases.jsonl \
   --baseline results/baseline.jsonl \
-  --candidate results/v0.5.jsonl \
+  --candidate results/v0.6.jsonl \
   --strict-completeness
+```
+
+Validate and compile a harness state, then analyze observed traces:
+
+```bash
+python3 skill/dagx-agi-kernel/scripts/harness_efficiency.py \
+  validate-state --state skill/dagx-agi-kernel/examples/harness-state.example.json
+python3 skill/dagx-agi-kernel/scripts/harness_efficiency.py \
+  compile-context --state skill/dagx-agi-kernel/examples/harness-state.example.json \
+  --node n-update --load-tool-schemas
+python3 skill/dagx-agi-kernel/scripts/harness_efficiency.py \
+  analyze-traces --traces skill/dagx-agi-kernel/examples/traces.example.jsonl
 ```
 
 The scorer reports activation precision/recall/specificity, paired task-success delta, token delta, protected failures, group results, and missing measurements separately.
@@ -355,6 +408,10 @@ The kernel translates mechanisms from primary research into guarded agent-contro
 - [Levels of AGI](https://arxiv.org/abs/2311.02462): capability breadth, performance depth, metacognition, autonomy, and ecological validity.
 - [ARC-AGI-3](https://arxiv.org/abs/2603.24621): interactive exploration, goal inference, world-model formation, planning, and action efficiency.
 - [ReAct](https://arxiv.org/abs/2210.03629), [Reflexion](https://arxiv.org/abs/2303.11366), and [Language Agent Tree Search](https://arxiv.org/abs/2310.04406): observation-linked action, episodic feedback, and alternative trajectory search.
+- [ReWOO](https://arxiv.org/abs/2305.18323) and [LLMCompiler](https://arxiv.org/abs/2312.04511): separated planning and observations, dependency-aware parallel execution, and reduced repeated inference.
+- [SGLang](https://arxiv.org/abs/2312.07104), [Lost in the Middle](https://arxiv.org/abs/2307.03172), and [LLMLingua-2](https://arxiv.org/abs/2403.12968): reusable prefixes, long-context retrieval limits, and task-aware compression.
+- [RouteLLM](https://arxiv.org/abs/2406.18665): workload-trained cost/quality routing rather than universal model thresholds.
+- [SWE-agent](https://arxiv.org/abs/2405.15793): the agent-computer interface itself materially affects task performance.
 - [Adam](https://arxiv.org/abs/1412.6980), [AdamW](https://arxiv.org/abs/1711.05101), and [On the Convergence of Adam and Beyond](https://research.google/pubs/on-the-convergence-of-adam-and-beyond/): moment estimation, independent complexity decay, and long-term failure guards.
 - [ProTeGi](https://aclanthology.org/2023.emnlp-main.494/), [TextGrad](https://arxiv.org/abs/2406.07496), [OPRO](https://arxiv.org/abs/2309.03409), and [GEPA](https://arxiv.org/abs/2507.19457): evidence-directed optimization of prompts and compound agent systems without pretending that text is a true gradient.
 - [No Free Lunch Theorems](https://doi.org/10.1109/4235.585893): no fixed optimizer is uniformly superior across all possible problem classes.
@@ -363,7 +420,7 @@ These papers support individual mechanisms and measurement principles. They do n
 
 ## Evidence and limitations
 
-Current release: `V0.5`
+Current release: `V0.6`
 
 Verified:
 
@@ -374,6 +431,9 @@ Verified:
 - every reference is discoverable from the root skill;
 - the versioned corpus contains 10 activation cases, 10 negative controls, and 5 boundary cases;
 - the scorer computes activation, paired success, token, regression, group, and missing-data metrics without a composite score;
+- both runtime schemas parse as JSON Schema Draft 2020-12 documents;
+- the runtime self-test covers valid plans, cycles, unresolved dependencies/tools, unordered write conflicts, unguarded external actions, context exclusion, deterministic cache identity, trace totals, cache ratio, and protected failures;
+- the audit invokes the runtime self-test and rejects missing or non-executable runtime components;
 - protected baseline remains available through Git version history;
 - benchmark, transfer, attribution, and self-modification claim gates are encoded.
 
@@ -381,6 +441,8 @@ Not yet established:
 
 - statistically significant improvement in task success rate across independent models and task families;
 - calibrated activation precision and recall;
+- measured provider cache savings, latency reduction, token reduction, or cost reduction on representative workloads;
+- calibrated per-node model-routing thresholds;
 - universal transfer across harnesses;
 - convergence on every solvable goal;
 - AGI, ASI, or recursive capability takeoff.
@@ -396,6 +458,7 @@ For unsupported general performance claims: `Insufficient data to verify`.
 | `V0.3` | Adaptive optimizer routing and exact gradient boundary |
 | `V0.4` | Fluid-intelligence directive, acquisition curves, active abstraction, transfer ladder, and benchmark integrity |
 | `V0.5` | Behavior-first root under 10 KB, host-router precedence, 25-case activation corpus, trial ledger, and matched-run scorer |
+| `V0.6` | Decision-state compiler, progressive tools, stable-prefix identity, graph/write safety, side-effect gates, checkpoints, trace analyzer, and deterministic runtime tests |
 
 Versioned Git history preserves prior champions and provides rollback points.
 

@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dankofly/perfectify/blob/main/skill/dagx-agi-kernel/schemas/harness-state.schema.json",
+  "title": "Perfectify Harness State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "task_id",
+    "goal",
+    "acceptance_gates",
+    "protected_behaviors",
+    "authority",
+    "budget",
+    "stable_context_refs",
+    "tool_index",
+    "knowns",
+    "unknowns",
+    "evidence",
+    "nodes",
+    "champion",
+    "checkpoint",
+    "active_node"
+  ],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "goal": {"type": "string", "minLength": 1},
+    "acceptance_gates": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/gate"}
+    },
+    "protected_behaviors": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "authority": {"$ref": "#/$defs/authority"},
+    "budget": {"$ref": "#/$defs/budget"},
+    "stable_context_refs": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/stableRef"}
+    },
+    "tool_index": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/tool"}
+    },
+    "knowns": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/known"}
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/unknown"}
+    },
+    "evidence": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/evidence"}
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/node"}
+    },
+    "champion": {"$ref": "#/$defs/champion"},
+    "checkpoint": {"$ref": "#/$defs/checkpoint"},
+    "active_node": {"type": ["string", "null"]}
+  },
+  "$defs": {
+    "nonnegativeIntegerOrNull": {"type": ["integer", "null"], "minimum": 0},
+    "nonnegativeNumberOrNull": {"type": ["number", "null"], "minimum": 0},
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_tokens", "output_tokens", "tool_calls", "wall_time_ms", "cost"],
+      "properties": {
+        "input_tokens": {"$ref": "#/$defs/nonnegativeIntegerOrNull"},
+        "output_tokens": {"$ref": "#/$defs/nonnegativeIntegerOrNull"},
+        "tool_calls": {"$ref": "#/$defs/nonnegativeIntegerOrNull"},
+        "wall_time_ms": {"$ref": "#/$defs/nonnegativeIntegerOrNull"},
+        "cost": {"$ref": "#/$defs/nonnegativeNumberOrNull"}
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "priority", "condition", "status"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "priority": {"type": "integer", "minimum": 1},
+        "condition": {"type": "string", "minLength": 1},
+        "status": {"enum": ["pending", "passed", "failed", "blocked"]}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["read_scopes", "write_scopes", "external_actions"],
+      "properties": {
+        "read_scopes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "write_scopes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "external_actions": {"type": "boolean"}
+      }
+    },
+    "stableRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "uri", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "uri": {"type": "string", "minLength": 1},
+        "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "summary", "schema_ref"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "summary": {"type": "string", "minLength": 1},
+        "schema_ref": {"type": ["string", "null"]},
+        "schema": {"type": ["object", "null"]}
+      }
+    },
+    "known": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "claim", "evidence_refs"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "claim": {"type": "string", "minLength": 1},
+        "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      }
+    },
+    "unknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "question", "blocks"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "question": {"type": "string", "minLength": 1},
+        "blocks": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "artifact_ref", "digest", "freshness"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "artifact_ref": {"type": "string", "minLength": 1},
+        "digest": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "freshness": {"type": ["string", "null"]}
+      }
+    },
+    "verifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {"enum": ["deterministic", "readback", "model", "human"]},
+        "ref": {"type": "string", "minLength": 1}
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "objective", "deps", "status", "model_class", "escalation_conditions",
+        "tool_refs", "input_refs", "expected_evidence", "write_set", "side_effect",
+        "idempotency_key", "approval_gate", "readback_required", "recovery_ref",
+        "verifier", "result_ref", "budget"
+      ],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "objective": {"type": "string", "minLength": 1},
+        "deps": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "status": {"enum": ["pending", "ready", "running", "completed", "failed", "blocked", "skipped"]},
+        "model_class": {"enum": ["none", "small", "medium", "strong"]},
+        "escalation_conditions": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "tool_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "input_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "expected_evidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "write_set": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "side_effect": {"enum": ["read", "reversible_write", "external", "irreversible"]},
+        "idempotency_key": {"type": ["string", "null"]},
+        "approval_gate": {"type": ["string", "null"]},
+        "readback_required": {"type": "boolean"},
+        "recovery_ref": {"type": ["string", "null"]},
+        "verifier": {"$ref": "#/$defs/verifier"},
+        "result_ref": {"type": ["string", "null"]},
+        "budget": {"$ref": "#/$defs/budget"}
+      }
+    },
+    "champion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_ref", "verified_gate_ids"],
+      "properties": {
+        "artifact_ref": {"type": ["string", "null"]},
+        "verified_gate_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completed_nodes", "state_digest", "next_safe_node", "attempted_idempotency_keys"],
+      "properties": {
+        "completed_nodes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "state_digest": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "next_safe_node": {"type": ["string", "null"]},
+        "attempted_idempotency_keys": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
@@ -134,18 +135,57 @@ def main() -> int:
 
     required_runtime_files = [
         root / "scripts" / "eval_kernel.py",
+        root / "scripts" / "harness_efficiency.py",
         root / "evals" / "cases.jsonl",
         root / "templates" / "trial-ledger.md",
         root / "references" / "evaluation-protocol.md",
         root / "references" / "formal-control-state.md",
+        root / "references" / "harness-efficiency.md",
+        root / "schemas" / "harness-state.schema.json",
+        root / "schemas" / "trace-event.schema.json",
+        root / "examples" / "harness-state.example.json",
+        root / "examples" / "traces.example.jsonl",
     ]
     for required in required_runtime_files:
         if not required.is_file():
-            errors.append(f"required V0.5 file is missing: {required.relative_to(root)}")
+            errors.append(f"required runtime file is missing: {required.relative_to(root)}")
 
-    for executable in (audit_script, root / "scripts" / "eval_kernel.py"):
+    efficiency_script = root / "scripts" / "harness_efficiency.py"
+    for executable in (audit_script, root / "scripts" / "eval_kernel.py", efficiency_script):
         if executable.is_file() and executable.stat().st_mode & 0o111 == 0:
             errors.append(f"required script is not executable: {executable.relative_to(root)}")
+
+    schemas = sorted((root / "schemas").glob("*.schema.json"))
+    for schema in schemas:
+        try:
+            payload = json.loads(schema.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            errors.append(f"invalid schema JSON in {schema.relative_to(root)}: {exc.msg}")
+            continue
+        if payload.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+            errors.append(f"schema does not declare draft 2020-12: {schema.relative_to(root)}")
+        if payload.get("type") != "object" or not payload.get("title"):
+            errors.append(f"schema lacks object type or title: {schema.relative_to(root)}")
+
+    runtime_self_test = "missing"
+    if efficiency_script.is_file():
+        try:
+            completed = subprocess.run(
+                [sys.executable, str(efficiency_script), "--self-test"],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                timeout=20,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            runtime_self_test = "error"
+            errors.append(f"harness runtime self-test could not run: {exc}")
+        else:
+            runtime_self_test = "passed" if completed.returncode == 0 else "failed"
+            if completed.returncode != 0:
+                detail = (completed.stderr or completed.stdout).strip()
+                errors.append(f"harness runtime self-test failed: {detail}")
 
     eval_cases = 0
     eval_groups: Counter[str] = Counter()
@@ -198,6 +238,8 @@ def main() -> int:
         "checked_relative_links": checked_links,
         "references": len(references),
         "orphan_references": len(orphan_references),
+        "schemas": len(schemas),
+        "runtime_self_test": runtime_self_test,
         "eval_cases": eval_cases,
         "eval_groups": dict(eval_groups),
     }
