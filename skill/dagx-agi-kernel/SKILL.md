@@ -2,7 +2,7 @@
 name: dagx-agi-kernel
 description: Improve and verify agent work after repeated failures, in dependency-heavy tasks, or when optimization claims need baseline and regression evidence. Use for DAGx/Perfectify requests, failed retries, risky multi-step work, or requests to verify an improvement. Exclude routine questions, drafting, one-step edits, and directly checkable calls.
 metadata:
-  version: "V1.0"
+  version: "V1.1"
 ---
 
 # Perfectify Control Kernel
@@ -59,7 +59,7 @@ Then: observe source-of-truth state -> select the highest-priority unresolved ga
 
 ## Harness Efficiency Runtime
 
-For multi-call, tool-heavy, long-horizon, or resumable work, read [harness efficiency](references/harness-efficiency.md): compile minimal decision state, load tool schemas lazily, preserve cacheable prefixes, serialize overlapping writes, use the cheapest decisive verifier, checkpoint material changes, record standardized traces. Internal control state may use compact machine-oriented notation; natural language only at human interfaces.
+For multi-call/long-horizon/resumable work read [harness efficiency](references/harness-efficiency.md): compile minimal decision state, lazy tool schemas, cacheable prefixes, serialize overlapping writes, cheapest decisive verifier, checkpoint material changes, standardized traces. Internal control state may use compact machine notation; natural language only at human interfaces.
 
 ## Evidence and Promotion
 
@@ -85,15 +85,15 @@ Build a DAG only when dependency order changes execution. Parallelize independen
 
 ### Approval gate runtime (external/irreversible actions)
 
-Model the action as a harness-state node (`side_effect`: `external`/`irreversible`, with `approval_gate`; see `schemas/harness-state.schema.json`), then run `scripts/harness_efficiency.py validate-state` and `compile-context --node <id>`. If the node is not released or scripts are unavailable: Invariant 12 applies (dry-run list + one question, end turn). Acting without a released node is a hard violation.
+Model it as a harness-state node (`side_effect`: `external`/`irreversible`, with `approval_gate`; see `schemas/harness-state.schema.json`); run `validate-state` then `compile-context --node <id>`. Node not released, or scripts unavailable: Invariant 12 applies. Acting unreleased is a hard violation.
 
 Read [orchestration and security](references/orchestration-security.md) for nontrivial DAGs, delegation, concurrent writes, recovery, or instruction-boundary threats.
 
 ## Novel Tasks and Generalization
 
-Record prior exposure, examples, tools, help, attempts, tokens, compute, cost. Measure the path to acceptance, not only the final score; require a withheld same-family case for near transfer and a different family for broader claims.
+Record prior exposure, examples, tools, help, attempts, tokens, cost. Measure the path to acceptance, not just final score; require withheld same-family evidence for near transfer, a different family for broader claims.
 
-Read [fluid intelligence](references/fluid-intelligence.md) for abstraction, acquisition curves, transfer, or AGI/benchmark claims; [goal convergence](references/goal-convergence.md) for bounded search and plateau escape; optional notation in [formal control state](references/formal-control-state.md).
+See [fluid intelligence](references/fluid-intelligence.md), [goal convergence](references/goal-convergence.md), [formal control state](references/formal-control-state.md).
 
 ## Output
 
@@ -101,10 +101,14 @@ Return the requested result first. Add only decisive verification, material unce
 
 ## Maintenance and Behavioral Evaluation
 
-For a kernel change: run `scripts/harness_efficiency.py --self-test`, `scripts/audit_kernel.py .`, and `scripts/eval_kernel.py --cases evals/cases.jsonl --validate-cases`; then run matched cases with and without the skill, score both, and report activation precision/recall, success delta, token delta, and protected failures. Promote only on behavioral evidence, never structural audit alone.
+For kernel changes: run the self-test, audit, and case validation scripts; then run matched cases with and without the skill and report activation precision/recall, success/token deltas, protected failures. Promote only on behavioral evidence.
+
+## Loops
+
+Repeated work cycles until a stop condition is met; prefer the simplest type: turn-based, goal-based (deterministic done-criteria + max-turn cap), time-based (interval), proactive (event-driven). Every F1+ loop MUST carry a learning hook: after each cycle run Post-task Learning so the next cycle starts with an updated playbook. Escalate types only on measured repetition. Details: [loop engineering](references/loop-engineering.md).
 
 ## Post-task Learning (F1+ tasks)
 
-After each nontrivial task: distill <=3 trace lessons as playbook bullets (`[id] helpful=N harmful=M :: rule with Trigger + Test`), propose JSON deltas (`ADD/UPDATE/REMOVE`), apply via `scripts/merge_deltas.py`; mark existing bullets helpful/harmful. Every lesson needs trigger + test condition. Govern with `scripts/govern_playbook.py --apply` above ~60 bullets or every ~15 tasks. Protocol: [self-learning](references/self-learning.md).
+After each nontrivial task (and each loop cycle): distill <=3 trace lessons as playbook bullets (`[id] helpful=N harmful=M :: rule with Trigger + Test`), propose JSON deltas, apply via `scripts/merge_deltas.py`; mark existing bullets helpful/harmful. Govern via `scripts/govern_playbook.py --apply` above ~60 bullets or every ~15 tasks. Protocol: [self-learning](references/self-learning.md).
 
 Read [the evaluation protocol](references/evaluation-protocol.md) before claiming performance improvement. Until matched model runs exist: `Insufficient data to verify`.
