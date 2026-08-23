@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -151,9 +152,11 @@ def main() -> int:
             errors.append(f"required runtime file is missing: {required.relative_to(root)}")
 
     efficiency_script = root / "scripts" / "harness_efficiency.py"
-    for executable in (audit_script, root / "scripts" / "eval_kernel.py", efficiency_script):
-        if executable.is_file() and executable.stat().st_mode & 0o111 == 0:
-            errors.append(f"required script is not executable: {executable.relative_to(root)}")
+    # NTFS has no POSIX exec bits; scripts run via `python script.py` there.
+    if os.name != "nt":
+        for executable in (audit_script, root / "scripts" / "eval_kernel.py", efficiency_script):
+            if executable.is_file() and executable.stat().st_mode & 0o111 == 0:
+                errors.append(f"required script is not executable: {executable.relative_to(root)}")
 
     schemas = sorted((root / "schemas").glob("*.schema.json"))
     for schema in schemas:
