@@ -1,0 +1,3 @@
+{"action": "govern", "report": {"total": 11, "retire": [{"id": "general-00002", "helpful": 0, "harmful": 5}], "evict": [], "dedup": [{"keep": "verificati-00001", "merge": "verificati-00004"}]}}
+{"action": "govern", "report": {"total": 9, "retire": [], "evict": [], "dedup": [{"keep": "gates-00002", "merge": "gates-00003"}]}}
+{"action": "govern", "report": {"total": 9, "retire": [{"id": "general-00002", "helpful": 0, "harmful": 6}], "evict": [], "dedup": []}}

@@ -27,6 +27,15 @@ def norm(c):
     return re.sub(r"\W+", " ", c.lower()).strip()
 
 
+def similar(a, b, threshold=0.82):
+    """Prefix-window Jaccard on word sets to catch near-duplicates."""
+    wa, wb = set(norm(a).split()), set(norm(b).split())
+    if not wa or not wb:
+        return False
+    inter = len(wa & wb)
+    return inter / max(1, min(len(wa), len(wb))) >= threshold
+
+
 def main():
     args = sys.argv[1:]
     apply = "--apply" in args
@@ -41,15 +50,17 @@ def main():
     report = {"total": len(bullets), "retire": [], "evict": [], "dedup": []}
 
     # dedupe by normalized content: keep highest (helpful - harmful), sum counters
-    seen = {}
+    seen = []
+    keep_map = {}
     for b in sorted(bullets, key=lambda x: -(x[1] - x[2])):
-        key = norm(b[3])
-        if key in seen:
-            report["dedup"].append({"keep": seen[key][0], "merge": b[0]})
+        twin = next((s for s in seen if similar(s[3], b[3])), None)
+        if twin is not None:
+            report["dedup"].append({"keep": twin[0], "merge": b[0]})
         else:
-            seen[key] = b
+            seen.append(b)
+            keep_map[b[0]] = b
 
-    unique = list(seen.values())
+    unique = list(seen)
 
     for bid, h, harm, c in unique:
         trials = h + harm
