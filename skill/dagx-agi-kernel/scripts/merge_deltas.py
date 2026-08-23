@@ -16,7 +16,7 @@ import json
 import re
 import sys
 
-BULLET = re.compile(r"^\[([a-z]+-\d{5})\] helpful=(\d+) harmful=(\d+) :: (.*)$")
+BULLET = re.compile(r"^\[([a-z][a-z0-9-]*-\d{5})\] helpful=(\d+) harmful=(\d+) :: (.*)$")
 SECTION = re.compile(r"^## (.+)$")
 
 
@@ -52,7 +52,8 @@ def next_id(items, section):
     prefix = re.sub(r"[^a-z0-9-]", "", raw)[:8] or "gen"
     h = hashlib.md5(raw.encode()).hexdigest()[:4]
     stem = f"{prefix}-{h}"
-    nums = [int(it["id"].split("-")[2]) for it in items
+    # rsplit: the prefix itself may contain hyphens (e.g. section "failure-recovery")
+    nums = [int(it["id"].rsplit("-", 1)[1]) for it in items
             if it["kind"] == "bullet" and it["id"].startswith(stem)]
     return f"{stem}-{(max(nums) + 1) if nums else 1:05d}"
 

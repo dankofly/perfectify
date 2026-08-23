@@ -14,7 +14,7 @@ import re
 import sys
 from collections import Counter
 
-BULLET = re.compile(r"^\[([a-z]+-\d{5})\] helpful=(\d+) harmful=(\d+) :: (.*)$")
+BULLET = re.compile(r"^\[([a-z][a-z0-9-]*-\d{5})\] helpful=(\d+) harmful=(\d+) :: (.*)$")
 
 
 def load(path):
@@ -38,6 +38,9 @@ def similar(a, b, threshold=0.82):
 
 def main():
     args = sys.argv[1:]
+    if not args or "-h" in args or "--help" in args:
+        print(__doc__.strip())
+        sys.exit(0 if args else 2)
     apply = "--apply" in args
     cap, min_trials = 60, 5
     if "--cap" in args:
