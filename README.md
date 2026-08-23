@@ -154,6 +154,14 @@ Where matched held-out runs don't exist yet, the kernel's own rule applies to it
 
 ## Quick start
 
+One-liner via [skills.sh](https://skills.sh):
+
+```bash
+npx skills add dankofly/perfectify
+```
+
+Or manually:
+
 ```bash
 git clone https://github.com/dankofly/perfectify.git
 cd perfectify
