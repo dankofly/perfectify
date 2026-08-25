@@ -78,6 +78,11 @@ def build_checks(fixture: Path) -> list[Check]:
               [str(SCRIPTS / "playbook_health.py"),
                str(SKILL / "playbook" / "playbook.md"), "--strict"],
               "procedural memory is within its drift thresholds"),
+        Check("memory admission gate rejects",
+              [str(SCRIPTS / "merge_deltas.py"), str(fixture.parent / "pb.md"),
+               str(fixture.parent / "bad_delta.json")],
+              "an environment-specific lesson cannot enter procedural memory",
+              expect_zero=False),
         Check("enforcement guard",
               [str(ROOT / "hooks" / "perfectify_guard.py"), "--self-test"],
               "the deterministic hook blocks what it says it blocks"),
@@ -95,6 +100,15 @@ def main() -> int:
             [PY, str(SCRIPTS / "safety_fixture.py"), "init", "--out", str(fixture)],
             capture_output=True, text=True, cwd=ROOT,
         )
+        # A throwaway playbook and a delta the gate must refuse.
+        (Path(tmp) / "pb.md").write_text(
+            "## gates\n"
+            "[gates-00001] helpful=1 harmful=0 :: Seed. Trigger: x. Test: y.\n",
+            encoding="utf-8")
+        (Path(tmp) / "bad_delta.json").write_text(json.dumps([{
+            "op": "ADD", "section": "gates",
+            "content": "Restart the worker on localhost:8080 when /var/run/app.pid is stale.",
+        }]), encoding="utf-8")
         checks = build_checks(fixture)
         results = [(c, *c.run()) for c in checks]
 

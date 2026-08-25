@@ -155,8 +155,15 @@ The log is a record of what was stopped, not a transcript of the session.
   assembled at runtime reaches the shell unmatched.
 - **String matching, not semantics.** It reads the command, not the filesystem.
   `python cleanup.py` is invisible to it.
-- **It fails open.** Malformed input exits 0 and lets normal permissions run. A
-  guard that crashes closed blocks every tool call and gets removed within a day.
+- **It fails open, on purpose, and that is not the general rule.** Malformed
+  input exits 0 and lets normal permissions run, because a guard that crashes
+  closed blocks every tool call and gets uninstalled within a day. The opposite
+  choice is correct one layer up: the playbook admission gate in
+  `merge_deltas.py` fails CLOSED, because a bad tool call is loud and recoverable
+  while a bad lesson entering procedural memory is silent and permanent. Fail
+  open at the execution boundary, fail closed at the memory boundary. That split
+  came from reading [dankofly/dagx](https://github.com/dankofly/dagx), whose
+  promotion gate is fail-closed throughout.
 - **Uninstallable.** Anything with write access to `settings.json` can turn it
   off. The self-protect rule raises the cost; it does not remove the hole.
 - **The notify path is not a gate.** It reports; it does not wait for an answer.

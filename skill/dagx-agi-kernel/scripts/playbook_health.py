@@ -36,6 +36,10 @@ SECTION = re.compile(r"^##\s+(.+?)\s*$")
 # honest output is the kernel's own phrase, not a smoothed line through noise.
 MIN_RUNS_FOR_TREND = 5
 
+# Admitted by merge_deltas with a quantitative claim and no evidence behind it.
+# Distinct from "never tried": this one was a measurement nobody measured.
+UNVERIFIED_TAG = "UNVERIFIED: "
+
 THRESHOLDS = {
     # share of active bullets that have never been tried in a real task
     "unverified_share": 0.60,
@@ -43,6 +47,8 @@ THRESHOLDS = {
     "at_risk_share": 0.15,
     # fraction of the cap consumed
     "cap_use": 0.90,
+    # share admitted as an unbacked quantitative claim
+    "unverified_tagged_share": 0.10,
 }
 
 
@@ -78,6 +84,7 @@ def parse(path: Path) -> tuple[list[dict], list[str]]:
             # A rule with no trigger and no test cannot be falsified, which
             # makes it decoration rather than procedure.
             "testable": "Test:" in rule and "Trigger:" in rule,
+            "tagged_unverified": rule.startswith(UNVERIFIED_TAG),
         })
     return bullets, errors
 
@@ -106,6 +113,7 @@ def report(bullets: list[dict], log: list[dict], cap: int) -> dict:
     load_bearing = [b for b in bullets if b["helpful"] >= 2 and b["harmful"] == 0]
     at_risk = [b for b in bullets if b["harmful"] > 0 and b["harmful"] >= b["helpful"]]
     untestable = [b for b in bullets if not b["testable"]]
+    tagged = [b for b in bullets if b["tagged_unverified"]]
     helpful_total = sum(b["helpful"] for b in bullets)
     harmful_total = sum(b["harmful"] for b in bullets)
     trials = helpful_total + harmful_total
@@ -127,6 +135,8 @@ def report(bullets: list[dict], log: list[dict], cap: int) -> dict:
         "at_risk": len(at_risk),
         "at_risk_share": share(len(at_risk), total),
         "untestable": len(untestable),
+        "unverified_tagged": len(tagged),
+        "unverified_tagged_share": share(len(tagged), total),
         "total_trials": trials,
         "helpful_rate": share(helpful_total, trials),
         "governance_runs": len(govern_runs),
@@ -170,6 +180,7 @@ def self_test() -> int:
 [gates-00001] helpful=3 harmful=0 :: Solid rule. Trigger: x. Test: y.
 [gates-00002] helpful=0 harmful=0 :: Untried claim. Trigger: x. Test: y.
 [gates-00003] helpful=1 harmful=4 :: Bad rule that governance should retire.
+[gates-00004] helpful=0 harmful=0 :: UNVERIFIED: Cuts tokens by 40 percent. Trigger: x. Test: y.
 """
     with tempfile.TemporaryDirectory() as tmp:
         p = Path(tmp) / "pb.md"
@@ -177,13 +188,14 @@ def self_test() -> int:
         bullets, errors = parse(p)
         if errors:
             failures.append(f"clean sample produced errors: {errors}")
-        if len(bullets) != 3:
-            failures.append(f"expected 3 bullets, parsed {len(bullets)}")
+        if len(bullets) != 4:
+            failures.append(f"expected 4 bullets, parsed {len(bullets)}")
 
         r = report(bullets, [], cap=60)
         checks = {
-            "active_bullets": 3, "unverified": 1, "load_bearing": 1,
+            "active_bullets": 4, "unverified": 2, "load_bearing": 1,
             "at_risk": 1, "untestable": 1, "total_trials": 8,
+            "unverified_tagged": 1,
         }
         for key, want in checks.items():
             if r[key] != want:
@@ -211,7 +223,7 @@ def self_test() -> int:
 
     for line in failures:
         print(line, file=sys.stderr)
-    total = 12
+    total = 13
     print(f"self-test: {total - len(failures)}/{total} checks passed")
     return 1 if failures else 0
 

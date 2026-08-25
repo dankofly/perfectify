@@ -187,6 +187,45 @@ Self-evolving skill libraries have a documented failure mode: ungoverned LLM-aut
 
 ---
 
+## Research status
+
+Borrowed from the sibling research repo, [dankofly/dagx](https://github.com/dankofly/dagx),
+which states its hypotheses as falsifiable claims with verdicts attached and
+lists one as refuted. That is a harder standard than a caveat paragraph, so this
+project holds itself to it too.
+
+**H1: "A safety rule placed in a numbered invariant list is followed more
+reliably than the same rule written as prose." Confounded, not tested.**
+The nine runs that motivated it changed placement and wording in the same edit,
+so they cannot separate the two. One model family, synthetic data, graded by the
+author unblinded, transcripts not committed. The isolating third condition,
+anti-evasion wording left in prose and unmoved, has never been run. This is the
+claim the project was launched on, and it does not currently hold up.
+
+**H2: "A deterministic pre-execution hook stops irreversible commands that the
+instruction layer lets through." Untested behaviorally.**
+The matcher does what it says on the strings it is handed: 34 of 34 self-test
+cases, and you can rerun them. Nobody has measured how often a real agent's real
+command matches it in a live session, or what the false-positive rate is when it
+does. A passing self-test is a statement about the regexes, not about agents.
+
+**H3: "Gating playbook admission on evidence keeps procedural memory from
+degrading." Untested, new in V1.5.**
+The gate exists (`merge_deltas.py` caps quantitative claims without evidence and
+rejects environment-specific rules). The measurement exists
+(`playbook_health.py`). The history does not: it currently reports *Insufficient
+data to verify, 3 governance runs recorded, 5 needed*.
+
+**Relevant refutation from next door.** DAGx tested "runtime evolution of prompts
+improves output quality" against expert prompts and optimizer baselines, and
+refuted it. That is a neighbouring hypothesis to anything this repo might claim
+about self-improvement, and it failed. Perfectify's learning loop is therefore
+positioned as bounded memory hygiene, not as a quality-lift mechanism, and any
+future claim in that direction starts from a refuted prior rather than a hopeful
+one.
+
+---
+
 ## Evidence, split by what you can check yourself
 
 This section used to open with "every claim comes from recorded matched runs on the shipped eval harness". That was not true: the harness ships cases, not runs, and someone on the launch thread checked and said so. The claims are split below by whether you can verify them from this repository or have to take the author's word.
@@ -266,7 +305,7 @@ integration tests green twice consecutively
 | `playbook/playbook.md` | The agent's growing procedural memory (structured bullets, truthful counters) |
 | `playbook/decision-log.jsonl` | Audit trail of every governance action |
 | `scripts/harness_efficiency.py` | Decision-state compiler, DAG/cycle/write-conflict validation, approval gates, trace analytics |
-| `scripts/merge_deltas.py` | Deterministic playbook merge (ADD/UPDATE/REMOVE), collision-free IDs |
+| `scripts/merge_deltas.py` | Deterministic playbook merge plus the admission gate: quantitative claims without evidence are capped, environment-specific rules rejected |
 | `scripts/govern_playbook.py` | Ratchet governance: retirement, cap eviction, fuzzy dedup, audit logging |
 | `scripts/eval_kernel.py` | Matched-run scoring: activation precision/recall, success/token deltas |
 | `scripts/audit_kernel.py` | Structural audit: frontmatter, links, budget, placeholders |

@@ -110,6 +110,6 @@ Prefer the simplest loop type: turn-based, goal-based, time-based, proactive. Ev
 
 ## Post-task Learning (F1+ tasks)
 
-After each nontrivial task or loop cycle: distill <=3 lessons as playbook bullets (`[id] helpful=N harmful=M :: rule with Trigger + Test`), propose JSON deltas, apply via `scripts/merge_deltas.py`; mark existing bullets helpful/harmful. Govern via `scripts/govern_playbook.py --apply` above ~60 bullets or every ~15 tasks; check drift with `scripts/playbook_health.py`. Protocol: [self-learning](references/self-learning.md).
+After each nontrivial task or loop cycle: distill <=3 lessons as playbook bullets (`[id] helpful=N harmful=M :: rule with Trigger + Test`), propose JSON deltas, apply via `scripts/merge_deltas.py` (attach `evidence` for any quantitative lesson); mark existing bullets helpful/harmful. Govern via `scripts/govern_playbook.py --apply` above ~60 bullets or every ~15 tasks; check drift with `scripts/playbook_health.py`. Protocol: [self-learning](references/self-learning.md).
 
 Read [the evaluation protocol](references/evaluation-protocol.md) before claiming performance improvement. Until matched model runs exist: `Insufficient data to verify`.
