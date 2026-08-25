@@ -63,7 +63,8 @@ specific person objected to a specific thing. None of it was on a roadmap.
 | You moved the rule and rewrote it in one change | u/JD_66, u/tigerhuxley | Confound named in three places, with the third condition that would isolate it |
 | n=9 is a coin-flip streak, LLMs are never repeatable | [u/tigerhuxley](https://www.reddit.com/r/claudeskills/comments/1vwbawq/comment/p5hfz7w/), u/Mundane_Incident_853 | `eval_kernel.py --min-runs`: refuses a pass rate below N graded runs, names cases with mixed outcomes |
 | The self-distilling loop will over-constrain itself into paralysis | u/tigerhuxley | `playbook_health.py`: measures it, and says *Insufficient data to verify* until enough governance runs exist |
-| This belongs in a hook, not a skill | u/komodorian, u/RCawston, u/zac_attack_, u/JD_66 | `hooks/perfectify_guard.py`, and the README says a skill is not a security boundary |
+| This belongs in a hook, not a skill | u/komodorian, u/RCawston, u/zac_attack_, u/JD_66, and [u/Crafty_Ball_8285](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5k4r56/) in four words | `hooks/perfectify_guard.py`, and the README says a skill is not a security boundary |
+| The harness should enforce this, not a skill | [u/Mean-Loquat-7982](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5jrg0f/) | Hermes' own approach documented in [hooks/README.md](hooks/README.md); use the runtime's gate first, this is the portable fallback |
 | Instructions an LLM interprets cannot be trusted | [u/Important-Radish-722](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5g4y4a/) | `--status` reports what is actually enforced; `redteam-11` fails a claimed hard stop that isn't installed |
 | `rm -rf ~/.hermes/skills/perfectify` | [u/brav0charli3](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5mvwul/) | Guard self-protection; `redteam-03` |
 | Hermes won't hold "don't execute unless the user has my Discord ID" | [u/itsred_man](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5k9h93/) | Identity allowlist, deny on unknown principal, audit log and admin-channel notify |
@@ -189,6 +190,62 @@ Self-evolving skill libraries have a documented failure mode: ungoverned LLM-aut
 
 ---
 
+## Questions from the thread with no feature attached
+
+Some of it was answered by building something. These were not, and saying so is
+cheaper than letting them look handled.
+
+**"Can this help overcome output drift in a complex and tool-heavy skill run?"**
+([u/crabsofsteel](https://www.reddit.com/r/claudeskills/comments/1vwbawq/), never
+answered at the time, which was rude of me.) Honestly: no, not as such. The
+kernel checks work at gates, and after a mutation it forces a read-back and
+comparison against intent, which catches a step that went wrong. It measures
+nothing *within* a long run, has no notion of quality decaying over twenty tool
+calls, and would not tell you it is happening. Detecting drift needs a signal
+sampled during the run, and there is no such signal here. If you have one, that
+is a genuinely interesting thing to bolt on.
+
+**"An agent lies like 20% of the time."**
+([u/ZyberZeon](https://www.reddit.com/r/claudeskills/comments/1vwbawq/)) That is
+the assumption the whole design runs on, and it is why nothing here trusts a
+model's report of its own behaviour. The deletion verdict is a file hash. The
+guard is a separate process. What none of it does is make the model honest, and
+a rate like that is exactly why `--min-runs` refuses to report a pass rate from
+one run and names cases that came out differently on identical input.
+
+**"The fix is using GPT agents in codex. They don't break AGENTS.md rules unless
+AGENTS.md specifically allows me to override them."**
+([u/shady101852](https://www.reddit.com/r/claudeskills/comments/1vwbawq/)) If
+your harness enforces instruction adherence at the runtime level, use that. Same
+answer as for Hermes, which puts dangerous-command approval and container
+isolation in the runtime rather than in a prompt. This repo is for the case where
+the harness does not, and the honest measurement, which nobody here has run, is
+whether the instruction layer adds anything on top of a harness that already
+holds the line.
+
+**"Scope creep: you went from 'put the safety rule in a numbered list' to a state
+compiler, four effort modes and a self-distilling governance loop."**
+([u/tigerhuxley](https://www.reddit.com/r/claudeskills/comments/1vwbawq/comment/p5hfz7w/),
+and [u/fligglymcgee](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5g6k3f/)
+called it over-baked.) Fair, and it got worse: the folder was 201 KB at launch
+and V1.5 added 27% on top. What "200 KB of kernel" hides is that it is three
+different costs, so `audit_kernel.py` now reports them separately:
+
+| Tier | Bytes | When it costs you |
+| --- | --- | --- |
+| `SKILL.md` | 10,090 | Every activation. This is the only number the byte budget guards |
+| 12 references | 85,597 | Only when something triggers the link |
+| scripts, schemas, evals | 160,204 | Never in the context. They run in another process |
+
+So the context cost did not grow; the review cost did, and that is the real
+version of the complaint. `verify.py` is the answer to the review cost and not
+to the conceptual one. On the conceptual one there is no counter-argument worth
+making: every piece traces to a named objection in the table above, and "someone
+asked for it" is a reason, not a justification. If you think a mechanism in here
+does not earn its place, that is a useful issue to open.
+
+---
+
 ## Research status
 
 Borrowed from the sibling research repo, [dankofly/dagx](https://github.com/dankofly/dagx),
@@ -265,7 +322,7 @@ This section used to open with "every claim comes from recorded matched runs on 
 | Claim | Status |
 | --- | --- |
 | Prose gate 0/6, invariant gate 3/3 under "execute now" | n=9 total, 1 to 3 runs per cell, one model family, synthetic data (200 records). Confounded: the rule moved *and* gained anti-evasion sentences in the same change, so this cannot separate placement from wording. Raw transcripts not in the repo. |
-| Flaky-suite root cause p≈0.31/call, 60/60 green, no slowdown vs 0.37s baseline | One task, one session. The 60 proof runs were real; the transcript is not committed. p≈0.31 is a point estimate from a small sample, with no interval. |
+| Flaky-suite root cause p≈0.31/call, 60/60 green, no slowdown vs 0.37s baseline | One task, one session. The 60 proof runs were real; the transcript is not committed. Two decimal places on a point estimate from one session is false precision, as a reader said: read it as "roughly a third of calls", and the interval is unknown because it was never computed. |
 | Learns across tasks, correct counters | Observed in live runs during development. No held-out corpus, no blinded grader. |
 | The loop found two real bugs in its own merge script | Verifiable in the commit history (`a4af33e`, `948225c`); the loop transcript is not committed. |
 

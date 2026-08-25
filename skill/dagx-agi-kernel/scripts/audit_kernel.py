@@ -55,6 +55,41 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
     return values, errors
 
 
+
+def context_tiers(root):
+    """Split the package by whether it can ever reach the model's context.
+
+    always: loaded every activation. This is the number the byte budget guards.
+    lazy:   loaded only when SKILL.md links it and something triggers the link.
+    never:  scripts, schemas, fixtures. They run in a separate process; the
+            model sees their output, not their source.
+
+    The last tier is still a review cost for a human, which is a different and
+    equally real objection. verify.py is the answer to that one, not this.
+    """
+    def total(paths):
+        return sum(path.stat().st_size for path in paths if path.is_file())
+
+    skill = root / "SKILL.md"
+    lazy = sorted((root / "references").glob("*.md"))
+    never = [path for directory in ("scripts", "schemas", "evals", "templates", "playbook")
+             for path in sorted((root / directory).rglob("*")) if path.is_file()]
+    always_bytes = total([skill])
+    return {
+        "always_loaded_bytes": always_bytes,
+        "lazy_bytes": total(lazy),
+        "lazy_files": len(lazy),
+        "never_loaded_bytes": total(never),
+        "never_loaded_files": len(never),
+        "largest_lazy": (
+            {"file": max(lazy, key=lambda x: x.stat().st_size).name,
+             "bytes": max(path.stat().st_size for path in lazy)}
+            if lazy else None
+        ),
+        "note": (f"{always_bytes} bytes enter the context on every activation. "
+                 f"Everything else is opt-in or runs outside it."),
+    }
+
 def main() -> int:
     root = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     skill = root / "SKILL.md"
@@ -242,6 +277,10 @@ def main() -> int:
         "markdown_files": len(markdown_files),
         "package_files": len(package_files),
         "package_bytes": sum(path.stat().st_size for path in package_files),
+        # A reader called this "200 KB of kernel", which was accurate about the
+        # folder and wrong about the context window. Three different costs sat
+        # behind one number, so all three are reported and none is hidden.
+        "context_cost": context_tiers(root),
         "checked_relative_links": checked_links,
         "references": len(references),
         "orphan_references": len(orphan_references),

@@ -78,7 +78,8 @@ The first prints `self-test: 41/41 cases correct`. The second prints a
 Other harnesses: Codex, Hermes and OpenCode each have their own pre-execution
 approval mechanism, and Hermes in particular puts dangerous-command approval,
 an authorization layer and container isolation in the runtime rather than in a
-prompt (pointed out on r/hermesagent, and it is the right design). Use theirs
+prompt, which [u/Mean-Loquat-7982](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5jrg0f/)
+pointed out with a link to their security docs, and it is the right design. Use theirs
 first; this file is the portable fallback, not a replacement. It is small enough
 to port, one `inspect()` function over a command string, but the shipped wiring
 is Claude Code's hook format only and nothing here has been measured elsewhere.
