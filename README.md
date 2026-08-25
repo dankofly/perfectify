@@ -71,6 +71,8 @@ specific person objected to a specific thing. None of it was on a roadmap.
 | It forgets once context fills, or another skill contradicts it | [u/fligglymcgee](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5g6k3f/) | Invariant 13: precedence and re-read before acting; `redteam-09`, `redteam-10` |
 | Does it get stuck in evidentiary loops on trivial changes | [u/Nousies](https://www.reddit.com/r/codex/comments/1vwb7ir/comment/p5fxhns/) | `redteam-07`: a typo fix that fails the suite if the kernel escalates |
 | Reviewing generated code costs more than generating it | u/fligglymcgee | `verify.py`: every mechanical claim, two seconds, before you read a line |
+| Use a cheap fast model to classify the command, not just a pattern list | u/zac_attack_ | Guard layer 2: 2-of-2 consensus, fail-closed, scoped to writes layer 1 cleared. Off by default |
+| Does the governance cost more than it saves | u/Nousies | `jscore.py`: the cost/quality/latency policy made explicit, with the exchange rates it implies |
 | Pair the hook with `permissions.ask` and no auto-allow in the sandbox | [u/zac_attack_](https://www.reddit.com/r/claudeskills/comments/1vwbawq/comment/p5pjuix/) | Checked against the shipped settings schema and correct: `sandbox.autoAllowBashIfSandboxed` defaults to true. Wiring and the caveat are in [hooks/README.md](hooks/README.md) |
 
 Two objections have no fix and are listed because they are correct. A guard is
@@ -209,6 +211,21 @@ cases, and you can rerun them. Nobody has measured how often a real agent's real
 command matches it in a live session, or what the false-positive rate is when it
 does. A passing self-test is a statement about the regexes, not about agents.
 
+**H4: "A two-judge consensus layer catches destructive commands the pattern list
+misses." Untested here.**
+The plumbing works and its failure modes are covered by five stub-judge cases.
+Whether a small model actually classifies shell commands well, and at what false-
+positive rate in a live session, has not been measured in this repo. DAGx's
+0.77 single-judge and ~1.0 consensus figures are from its own audit task, not
+from shell commands, and are cited as the reason for the structure rather than
+as evidence for it.
+
+**No hypothesis attached to `jscore.py`.** It makes no empirical claim at all.
+The weights are a policy, the exchange rates are division, and the tool refuses
+to score anything you have not measured. It is included because an unexamined
+weight vector silently fixes the price of everything, not because it discovers
+anything.
+
 **H3: "Gating playbook admission on evidence keeps procedural memory from
 degrading." Untested, new in V1.5.**
 The gate exists (`merge_deltas.py` caps quantitative claims without evidence and
@@ -314,6 +331,7 @@ integration tests green twice consecutively
 | `hooks/perfectify_guard.py` | Deterministic `PreToolUse` guard: 28 destructive patterns, self-protection, optional identity allowlist, audit log, admin-channel notify, `--status` and a rules digest |
 | `scripts/safety_fixture.py` | Deterministic fixture and grader: the deletion verdict is a hash comparison, not a person's opinion |
 | `scripts/playbook_health.py` | Drift and paralysis metrics for procedural memory, with a trend it refuses to report from too few runs |
+| `scripts/jscore.py` | What verification is worth against what it costs. Ported from DAGx; the exchange rates are derived and proven, and it refuses to score estimates |
 | `hooks/settings.example.json` | Ready-to-merge Claude Code wiring |
 | `evals/cases.jsonl` | 25 activation, control, and boundary cases |
 | `evals/adversarial.jsonl` | 11 red-team cases, each from a reported bypass |

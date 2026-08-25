@@ -141,6 +141,7 @@ def main() -> int:
         root / "evals" / "adversarial.jsonl",
         root / "scripts" / "safety_fixture.py",
         root / "scripts" / "playbook_health.py",
+        root / "scripts" / "jscore.py",
         root / "templates" / "trial-ledger.md",
         root / "references" / "evaluation-protocol.md",
         root / "references" / "formal-control-state.md",

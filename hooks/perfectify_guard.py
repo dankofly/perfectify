@@ -83,6 +83,8 @@ ENV_ALLOWED = "PERFECTIFY_ALLOWED_PRINCIPALS"  # "discord:123,telegram:456"
 ENV_PRINCIPAL = "PERFECTIFY_PRINCIPAL"  # set per session by the gateway
 ENV_AUDIT_LOG = "PERFECTIFY_AUDIT_LOG"  # path to a JSONL decision log
 ENV_NOTIFY = "PERFECTIFY_NOTIFY_CMD"  # command receiving the decision on stdin
+ENV_JUDGE = "PERFECTIFY_JUDGE_CMD"  # layer 2 classifier, see judge_verdict()
+ENV_JUDGE_VOTES = "PERFECTIFY_JUDGE_VOTES"  # default 2, DAGx uses 2-of-2
 
 PRINCIPAL_KEYS = ("principal", "user_id", "session_principal", "author_id")
 
@@ -144,6 +146,64 @@ def record(entry: dict) -> None:
             )
         except (OSError, subprocess.SubprocessError):
             pass
+
+
+def judge_verdict(command: str) -> tuple[bool, str]:
+    """Layer 2: ask a cheap model about a command the patterns did not match.
+
+    Suggested on r/claudeskills: classify the command with a small fast model
+    instead of hoping a regex list is complete. It is off unless
+    PERFECTIFY_JUDGE_CMD is set, and it runs only on commands that look mutating
+    and that layer 1 already let through, so an ordinary read costs nothing.
+
+    Protocol: the command receives the shell command on stdin. It may print
+    {"safe": true|false, "reason": "..."} or simply exit 0 for safe, non-zero
+    for unsafe. Two independent invocations must BOTH return safe.
+
+    Fail-closed, unlike layer 1. A crashed judge, a timeout, unparseable output
+    or any disagreement all resolve to "send it to the human". That is affordable
+    here precisely because the set reaching this point is already narrow; the
+    regex layer stays fail-open so a broken judge can never block every call.
+
+    DAGx measured a single judge at ~0.77 precision and 2-of-2 consensus at ~1.0
+    on its own audit task, which is why the default is two votes. Nothing
+    equivalent has been measured for shell commands, so treat the count as a
+    structure borrowed from a neighbouring result, not as a tuned parameter.
+    """
+    cmd = os.environ.get(ENV_JUDGE, "").strip()
+    if not cmd:
+        return True, ""
+    try:
+        votes = max(1, min(5, int(os.environ.get(ENV_JUDGE_VOTES, "2"))))
+    except ValueError:
+        votes = 2
+
+    reasons = []
+    for i in range(votes):
+        try:
+            proc = subprocess.run(
+                cmd, shell=True, input=command, text=True, timeout=15,
+                capture_output=True,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            return False, f"judge {i + 1} failed ({type(exc).__name__}), failing closed"
+        out = (proc.stdout or "").strip()
+        safe, reason = None, ""
+        if out.startswith("{"):
+            try:
+                parsed = json.loads(out)
+                if isinstance(parsed.get("safe"), bool):
+                    safe = parsed["safe"]
+                    reason = str(parsed.get("reason", ""))[:200]
+            except (json.JSONDecodeError, AttributeError):
+                safe = None
+        if safe is None:
+            safe = proc.returncode == 0
+            reason = out[:200] or f"exit {proc.returncode}"
+        if not safe:
+            return False, f"judge {i + 1} flagged it: {reason}"
+        reasons.append(reason)
+    return True, "; ".join(r for r in reasons if r)
 
 
 def normalize(command: str) -> str:
@@ -218,6 +278,8 @@ def status() -> int:
         "identity_gate": f"on ({len(allowed)} principals)" if allowed else "off",
         "audit_log": os.environ.get(ENV_AUDIT_LOG) or "off",
         "notify": "on" if os.environ.get(ENV_NOTIFY) else "off",
+        "layer2_judge": ("on" if os.environ.get(ENV_JUDGE, "").strip()
+                         else "off (regex only)"),
         "not_covered": [
             "obfuscated commands (base64, generated scripts, runtime assembly)",
             "anything a process with write access to settings.json chooses to disable",
@@ -253,6 +315,13 @@ def main(argv: list[str]) -> int:
     needs_human, reason = inspect(tool_name, tool_input)
     if needs_human:
         emit("ask", reason, tool_name, command, principal_of(payload))
+        return 0
+
+    # Layer 2 only sees what layer 1 cleared and that still looks like a write.
+    if os.environ.get(ENV_JUDGE, "").strip() and isinstance(command, str)             and MUTATES.search(normalize(command)):
+        ok, why = judge_verdict(command)
+        if not ok:
+            emit("ask", f"layer 2: {why}", tool_name, command, principal_of(payload))
     return 0
 
 
@@ -347,6 +416,47 @@ def self_test() -> int:
                 f"-> pass={ok} (expected {must_pass}) {why}"
             )
 
+    # Layer 2, exercised with stub judges written as real files. An earlier
+    # version inlined shell one-liners with POSIX quoting, which silently did
+    # nothing on Windows because shell=True runs cmd.exe there. The stubs below
+    # are portable, and the same caveat applies to any judge or notify command
+    # you configure: it runs through the platform shell, not bash.
+    import os as _os
+    import tempfile
+    from pathlib import Path
+
+    judge_cases = [
+        ("print('{\"safe\": true}')", True, "json safe"),
+        ("print('{\"safe\": false, \"reason\": \"drops a table\"}')", False, "json unsafe"),
+        ("print('unstructured chatter')", True, "unparseable but exit 0 is safe"),
+        ("raise SystemExit(1)", False, "non-zero exit is unsafe"),
+        ("import sys; sys.stdin.read(); raise SystemExit(3)", False, "judge crash fails closed"),
+    ]
+    previous = _os.environ.get(ENV_JUDGE)
+    with tempfile.TemporaryDirectory() as tmp:
+        for index, (body, want_ok, label) in enumerate(judge_cases):
+            stub = Path(tmp) / f"judge{index}.py"
+            stub.write_text("import sys\nsys.stdin.read()\n" + body + "\n",
+                            encoding="utf-8")
+            _os.environ[ENV_JUDGE] = f'"{sys.executable}" "{stub}"'
+            _os.environ[ENV_JUDGE_VOTES] = "2"
+            got, _why = judge_verdict("mv a b")
+            if got is not want_ok:
+                failures.append(f"JUDGE ({label}): got {got}, expected {want_ok}")
+
+        # A judge that is not there at all must fail closed, not wave it through.
+        _os.environ[ENV_JUDGE] = str(Path(tmp) / "definitely-not-here-xyz")
+        if judge_verdict("mv a b")[0] is not False:
+            failures.append("JUDGE: a missing judge must fail closed")
+
+    _os.environ.pop(ENV_JUDGE, None)
+    _os.environ.pop(ENV_JUDGE_VOTES, None)
+    if previous is not None:
+        _os.environ[ENV_JUDGE] = previous
+    # Unset means the layer is absent, not that everything is unsafe.
+    if judge_verdict("mv a b") != (True, ""):
+        failures.append("JUDGE: unset PERFECTIFY_JUDGE_CMD must be a no-op")
+
     # The digest must be stable across calls and must move when a rule moves.
     first = rules_digest()
     if first != rules_digest():
@@ -362,7 +472,7 @@ def self_test() -> int:
 
     for line in failures:
         print(line, file=sys.stderr)
-    total = len(blocked) + len(allowed) + len(identity) + 3
+    total = len(blocked) + len(allowed) + len(identity) + len(judge_cases) + 5
     print(f"self-test: {total - len(failures)}/{total} cases correct")
     return 1 if failures else 0
 

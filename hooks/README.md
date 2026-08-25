@@ -72,7 +72,7 @@ echo '{"tool_name":"Bash","tool_input":{"command":"rm -rf /srv/data"}}' \
   | python3 hooks/perfectify_guard.py
 ```
 
-The first prints `self-test: 34/34 cases correct`. The second prints a
+The first prints `self-test: 41/41 cases correct`. The second prints a
 `permissionDecision: "ask"` payload. A benign command prints nothing and exits 0.
 
 Other harnesses: Codex, Hermes and OpenCode each have their own pre-execution
@@ -148,6 +148,43 @@ must never become a blocked tool call. The notify command gets 5 seconds.
 Allowed principals running harmless commands produce no output and no log line.
 The log is a record of what was stopped, not a transcript of the session.
 
+## Layer 2: a judge for what the patterns miss
+
+Suggested on r/claudeskills: rather than hoping a regex list is complete,
+classify the command with a small fast model. Off unless you configure it.
+
+```bash
+export PERFECTIFY_JUDGE_CMD="/path/to/judge.sh"   # command text arrives on stdin
+export PERFECTIFY_JUDGE_VOTES=2                   # default
+```
+
+The judge prints `{"safe": true|false, "reason": "..."}`, or simply exits 0 for
+safe and non-zero for unsafe. Both votes must come back safe.
+
+Three properties worth knowing before switching it on:
+
+**It only sees a narrow slice.** Layer 1 runs first and costs nothing. The judge
+is invoked only for commands layer 1 cleared that still look like a write, so a
+`git status` never reaches a model. A session heavy on file writes will still
+hit it often, and every hit is a model call you pay for.
+
+**It fails closed, and layer 1 does not.** A crashed judge, a timeout,
+unparseable output or a single dissenting vote all resolve to "ask the human".
+That is affordable here because the set reaching this point is already narrow.
+The regex layer stays fail-open on purpose, so a broken judge can never block
+every tool call.
+
+**Two votes is borrowed, not tuned.** DAGx measured a single judge at ~0.77
+precision and 2-of-2 consensus at ~1.0 on its own audit task. Nothing equivalent
+has been measured for shell commands here. Treat the count as a structure taken
+from a neighbouring result, not as a number that came out of this repo.
+
+**Shell portability.** `PERFECTIFY_JUDGE_CMD` and `PERFECTIFY_NOTIFY_CMD` run
+through the platform shell, which is cmd.exe on Windows and not bash. Single
+quotes there are literal characters, so a POSIX one-liner will silently do
+nothing. Point the variable at a script file rather than inlining quoting. The
+self-test caught exactly this bug in its own stubs.
+
 ## Limits, stated because they matter more than the feature list
 
 - **One unwrap layer.** `bash -c '…'` and `sudo bash -c '…'` are unwrapped and
@@ -169,7 +206,7 @@ The log is a record of what was stopped, not a transcript of the session.
 - **The notify path is not a gate.** It reports; it does not wait for an answer.
   Approval still happens in the harness. A queue that blocks until an admin
   replies is a different, bigger thing and is not in here.
-- **Unmeasured.** The 34 self-test cases are hand-written by the author. There is
+- **Unmeasured.** The 41 self-test cases are hand-written by the author. There is
   no held-out corpus and no false-positive rate from real sessions. If you run it
   and it fires on something ordinary, that is a bug worth an issue.
 
