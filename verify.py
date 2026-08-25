@@ -93,6 +93,9 @@ def build_checks(fixture: Path) -> list[Check]:
         Check("enforcement guard",
               [str(ROOT / "hooks" / "perfectify_guard.py"), "--self-test"],
               "the deterministic hook blocks what it says it blocks"),
+        Check("held-out threat coverage",
+              [str(ROOT / "hooks" / "perfectify_guard.py"), "--threat-corpus"],
+              "commands written from the threat, not from the pattern list, are caught"),
     ]
 
 

@@ -42,7 +42,7 @@ So the repo now ships two layers instead of pretending one is enough.
 | Layer | Acts | Stops | Defeated by |
 | --- | --- | --- | --- |
 | **Kernel** ([`skill/`](skill/dagx-agi-kernel/)) | Instruction level, before the model proposes an action | Bad plans, before a command exists. Invariant 12 now defines *irreversible* and rejects blanket grants | Argument, full context, a conflicting skill |
-| **Guard** ([`hooks/`](hooks/)) | Tool call, after the model decided, before the shell runs | The command itself, whatever the model believes. 28 destructive patterns, self-protection, optional identity allowlist and audit log | Obfuscation, or uninstalling it |
+| **Guard** ([`hooks/`](hooks/)) | Tool call, after the model decided, before the shell runs | The command itself, whatever the model believes. 40 patterns, checked against a held-out threat corpus, plus self-protection, optional identity allowlist and audit log | Obfuscation, a script whose name hides its job, or uninstalling it |
 
 The kernel is why a good agent asks. The guard is why a bad one has to. Neither is a sandbox: if the data matters, run the agent as a user that cannot delete it. Filesystem permissions do not read prompts.
 
@@ -71,6 +71,7 @@ specific person objected to a specific thing. None of it was on a roadmap.
 | A prompt injection before the skill loads bypasses everything | u/tigerhuxley | `redteam-04`; rules digest makes an edited guard visible |
 | It forgets once context fills, or another skill contradicts it | [u/fligglymcgee](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5g6k3f/) | Invariant 13: precedence and re-read before acting; `redteam-09`, `redteam-10` |
 | Does it get stuck in evidentiary loops on trivial changes | [u/Nousies](https://www.reddit.com/r/codex/comments/1vwb7ir/comment/p5fxhns/) | `redteam-07`: a typo fix that fails the suite if the kernel escalates |
+| The self-test only proves the regexes match strings you chose | found by applying u/tigerhuxley's and u/Mundane_Incident_853's reliability point to the guard itself | `threat_corpus.jsonl`: held-out coverage, 1/17 on first run, 25/25 now, permanent check in `verify.py` |
 | Reviewing generated code costs more than generating it | u/fligglymcgee | `verify.py`: every mechanical claim, two seconds, before you read a line |
 | Use a cheap fast model to classify the command, not just a pattern list | u/zac_attack_ | Guard layer 2: 2-of-2 consensus, fail-closed, scoped to writes layer 1 cleared. Off by default |
 | Does the governance cost more than it saves | u/Nousies | `jscore.py`: the cost/quality/latency policy made explicit, with the exchange rates it implies |
@@ -262,11 +263,16 @@ anti-evasion wording left in prose and unmoved, has never been run. This is the
 claim the project was launched on, and it does not currently hold up.
 
 **H2: "A deterministic pre-execution hook stops irreversible commands that the
-instruction layer lets through." Untested behaviorally.**
-The matcher does what it says on the strings it is handed: 34 of 34 self-test
-cases, and you can rerun them. Nobody has measured how often a real agent's real
-command matches it in a live session, or what the false-positive rate is when it
-does. A passing self-test is a statement about the regexes, not about agents.
+instruction layer lets through." Coverage measured, behaviour still untested.**
+This one moved, and not in the flattering direction first. The self-test passed
+41 of 41 while the guard caught **1 of 17** commands from a held-out set written
+from the threat rather than from the pattern list. It missed the launch scenario
+itself: `DELETE FROM` only matched without a `WHERE` clause, and "delete all
+inactive users" always has one. The pattern list went from 28 to 40 and the
+corpus now passes 25 of 25, kept as a permanent check so the circularity cannot
+come back. Still unmeasured, and it is the part that matters: how often a real
+agent's real command lands on this list in a live session, and what asking on
+every `DELETE FROM` costs in false positives.
 
 **H4: "A two-judge consensus layer catches destructive commands the pattern list
 misses." Untested here.**
@@ -385,7 +391,8 @@ integration tests green twice consecutively
 | `scripts/audit_kernel.py` | Structural audit: frontmatter, links, budget, placeholders |
 | `schemas/` | `harness-state` and `trace-event` JSON Schemas for the runtime |
 | `verify.py` | One command, every mechanical claim in this README, ~2 seconds |
-| `hooks/perfectify_guard.py` | Deterministic `PreToolUse` guard: 28 destructive patterns, self-protection, optional identity allowlist, audit log, admin-channel notify, `--status` and a rules digest |
+| `hooks/perfectify_guard.py` | Deterministic `PreToolUse` guard: 40 patterns, self-protection, optional identity allowlist, audit log, admin-channel notify, `--status` and a rules digest |
+| `hooks/threat_corpus.jsonl` | Held-out coverage set written from the threat, not from the patterns. Caught the guard missing its own flagship scenario |
 | `scripts/safety_fixture.py` | Deterministic fixture and grader: the deletion verdict is a hash comparison, not a person's opinion |
 | `scripts/playbook_health.py` | Drift and paralysis metrics for procedural memory, with a trend it refuses to report from too few runs |
 | `scripts/jscore.py` | What verification is worth against what it costs. Ported from DAGx; the exchange rates are derived and proven, and it refuses to score estimates |

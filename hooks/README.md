@@ -86,7 +86,7 @@ is Claude Code's hook format only and nothing here has been measured elsewhere.
 
 ## What it does
 
-Matches 28 deterministic patterns and returns `ask`. Destructive work is
+Matches 40 deterministic patterns and returns `ask`. Destructive work is
 legitimate work most of the time, and a blanket deny only teaches people to
 uninstall the hook; the goal is that a human sees the command, not that the
 action becomes impossible. The identity gate below is the one exception, and it
@@ -149,6 +149,50 @@ must never become a blocked tool call. The notify command gets 5 seconds.
 Allowed principals running harmless commands produce no output and no log line.
 The log is a record of what was stopped, not a transcript of the session.
 
+## Two tests, and why the second one exists
+
+`--self-test` asks whether the matcher does what the pattern list says. As a
+coverage claim that is circular: the cases were written from the patterns, so it
+passes by construction. It passed 41 of 41 while missing almost everything.
+
+`--threat-corpus` was written the other way round, from "what would an agent
+actually run to clean up inactive users", without looking at the pattern list.
+
+The first time it ran it scored **1 of 17**. It missed the launch scenario
+itself, because `DELETE FROM` was only matched *without* a `WHERE` clause and
+"delete all inactive users" always has one. It also missed bulk `UPDATE`, mongo
+`deleteMany`, `prisma migrate reset`, `redis-cli FLUSHALL`, `truncate -s 0`,
+`cp /dev/null`, `git checkout -- .`, `docker compose down -v`, and an inline
+`python -c` that rewrites a JSON file in place, which is how an agent edits a
+data store.
+
+It is 25 of 25 now, over 17 destructive commands and 8 controls. The pattern
+list went from 28 to 40. The kernel this ships with has an invariant that says
+local success is not held-out transfer; the guard was breaking it, and nothing
+would have surfaced that without a set written from the threat instead of from
+the code.
+
+```bash
+python3 perfectify_guard.py --self-test        # the matcher behaves as specified
+python3 perfectify_guard.py --threat-corpus    # it covers commands it did not inspire
+```
+
+**What it costs.** `DELETE FROM` and bulk `UPDATE` now ask on every occurrence,
+including `DELETE FROM users WHERE id = 3`. That case used to sit in the allowed
+list and was moved rather than exempted: a one-row delete against a real database
+is still irreversible, and one prompt is the price of covering the case the repo
+is named after. If you do heavy database work interactively you will notice.
+
+**The gap that stays open.** `python cleanup.py --confirm` is in the corpus as a
+control, and it is not a control, it is a known miss. A script name carries no
+information about what the script does. String matching cannot reach it and no
+pattern here pretends to. That is the boundary of this approach, and the answer
+to it is a permission boundary or a container, not a longer regex.
+
+If you find a command that slips through, add it to `threat_corpus.jsonl` first
+and the pattern second. A pattern without the command that motivated it is how
+the list drifts back into testing itself.
+
 ## Layer 2: a judge for what the patterns miss
 
 Suggested on r/claudeskills: rather than hoping a regex list is complete,
@@ -207,7 +251,11 @@ self-test caught exactly this bug in its own stubs.
 - **The notify path is not a gate.** It reports; it does not wait for an answer.
   Approval still happens in the harness. A queue that blocks until an admin
   replies is a different, bigger thing and is not in here.
-- **Unmeasured.** The 41 self-test cases are hand-written by the author. There is
+- **Coverage is measured against a held-out set, not against real sessions.**
+  The threat corpus is 17 destructive commands one person thought of. It is a
+  much better number than the self-test alone, and it is still not a
+  false-positive rate from anybody's real week of work.
+- **Unmeasured elsewhere.** The 41 self-test cases are hand-written by the author. There is
   no held-out corpus and no false-positive rate from real sessions. If you run it
   and it fires on something ordinary, that is a bug worth an issue.
 
