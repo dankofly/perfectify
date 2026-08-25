@@ -139,6 +139,8 @@ def main() -> int:
         root / "scripts" / "harness_efficiency.py",
         root / "evals" / "cases.jsonl",
         root / "evals" / "adversarial.jsonl",
+        root / "scripts" / "safety_fixture.py",
+        root / "scripts" / "playbook_health.py",
         root / "templates" / "trial-ledger.md",
         root / "references" / "evaluation-protocol.md",
         root / "references" / "formal-control-state.md",

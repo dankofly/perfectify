@@ -115,8 +115,10 @@ def validate_cases(
 
 
 def validate_results(
-    rows: list[dict[str, Any]], source: Path, case_ids: set[str]
+    rows: list[dict[str, Any]], source: Path, case_ids: set[str],
+    allow_repeats: bool = False,
 ) -> list[str]:
+    """allow_repeats is set in multi-run mode, where N rows per case is the point."""
     errors: list[str] = []
     seen: set[str] = set()
     nullable_bools = ("activated", "success")
@@ -134,7 +136,7 @@ def validate_results(
         if not isinstance(case_id, str) or not case_id:
             errors.append(f"{source}:{line}: id must be a non-empty string")
             continue
-        if case_id in seen:
+        if case_id in seen and not allow_repeats:
             errors.append(f"{source}:{line}: duplicate result id {case_id!r}")
         seen.add(case_id)
         if case_id not in case_ids:
@@ -333,6 +335,81 @@ def paired_comparison(
     }
 
 
+def multi_run_summary(
+    cases: list[dict[str, Any]], rows: list[dict[str, Any]], min_runs: int
+) -> dict[str, Any]:
+    """Per-case pass rate over repeated runs, with under-powered cells named.
+
+    A single run against a stochastic system is an anecdote. This refuses to
+    print a rate for any case with fewer than `min_runs` observations rather
+    than reporting 1/1 as 100%.
+    """
+    by_case: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        case_id = row.get("id")
+        if isinstance(case_id, str):
+            by_case.setdefault(case_id, []).append(row)
+
+    per_case: dict[str, Any] = {}
+    underpowered: list[str] = []
+    unstable: list[str] = []
+    graded_rates: list[float] = []
+
+    for case in cases:
+        case_id = case["id"]
+        runs = by_case.get(case_id, [])
+        known = [r["success"] for r in runs if type(r.get("success")) is bool]
+        entry: dict[str, Any] = {"runs": len(runs), "graded": len(known)}
+        if len(known) < min_runs:
+            entry["pass_rate"] = None
+            entry["status"] = (
+                f"Insufficient data to verify: {len(known)} graded runs, "
+                f"{min_runs} required"
+            )
+            underpowered.append(case_id)
+        else:
+            passes = sum(1 for value in known if value)
+            rate = passes / len(known)
+            entry["passes"] = passes
+            entry["pass_rate"] = round(rate, 4)
+            entry["status"] = "reported"
+            graded_rates.append(rate)
+            # Neither reliably safe nor reliably broken is the finding that
+            # matters most for a gate, so it gets named rather than averaged away.
+            if 0.0 < rate < 1.0:
+                entry["stability"] = "mixed outcomes across identical runs"
+                unstable.append(case_id)
+            else:
+                entry["stability"] = "consistent across graded runs"
+        per_case[case_id] = entry
+
+    graders = Counter(
+        r.get("grader") for r in rows if isinstance(r.get("grader"), str)
+    )
+    deterministic = sum(
+        count for grader, count in graders.items()
+        if grader.lower().startswith("deterministic")
+    )
+
+    return {
+        "min_runs": min_runs,
+        "cases_total": len(cases),
+        "cases_reportable": len(cases) - len(underpowered),
+        "cases_underpowered": underpowered,
+        "cases_with_mixed_outcomes": unstable,
+        "mean_pass_rate_over_reportable": (
+            round(statistics.fmean(graded_rates), 4) if graded_rates else None
+        ),
+        "graded_rows": sum(graders.values()),
+        "deterministically_graded_rows": deterministic,
+        "grader_note": (
+            "Rows whose grader string does not start with 'deterministic' were "
+            "decided by a person or a heuristic. Weigh them accordingly."
+        ),
+        "per_case": per_case,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", required=True, type=Path)
@@ -344,6 +421,10 @@ def parse_args() -> argparse.Namespace:
         help="case-file layout to validate against (default: activation)",
     )
     parser.add_argument("--strict-completeness", action="store_true")
+    parser.add_argument(
+        "--min-runs", type=int, default=None,
+        help="multi-run mode: require N graded runs per case before reporting a rate",
+    )
     return parser.parse_args()
 
 
@@ -358,11 +439,15 @@ def main() -> int:
     if args.candidate:
         candidate_rows, candidate_errors = load_jsonl(args.candidate)
         errors.extend(candidate_errors)
-        errors.extend(validate_results(candidate_rows, args.candidate, case_ids))
+        errors.extend(validate_results(
+            candidate_rows, args.candidate, case_ids,
+            allow_repeats=args.min_runs is not None))
     if args.baseline:
         baseline_rows, baseline_errors = load_jsonl(args.baseline)
         errors.extend(baseline_errors)
-        errors.extend(validate_results(baseline_rows, args.baseline, case_ids))
+        errors.extend(validate_results(
+            baseline_rows, args.baseline, case_ids,
+            allow_repeats=args.min_runs is not None))
 
     if errors:
         print(json.dumps({"status": "failed", "errors": errors}, indent=2, sort_keys=True))
@@ -378,6 +463,26 @@ def main() -> int:
             "Recorded success still requires an auditable deterministic or blinded grader.",
         ],
     }
+
+    if args.min_runs is not None:
+        # Multi-run mode replaces the single-row metrics rather than layering on
+        # top: row_map keeps one row per id, which would quietly discard every
+        # run but the last.
+        if args.candidate:
+            report["candidate_runs"] = multi_run_summary(
+                cases, candidate_rows, args.min_runs)
+        if args.baseline:
+            report["baseline_runs"] = multi_run_summary(
+                cases, baseline_rows, args.min_runs)
+        report["limitations"].append(
+            "Multi-run mode reports per-case pass rates only; activation "
+            "precision/recall and token deltas need single-run files."
+        )
+        under = report.get("candidate_runs", {}).get("cases_underpowered", [])
+        if under:
+            report["status"] = "incomplete"
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 1 if (args.strict_completeness and under) else 0
 
     incomplete = False
     if args.candidate:

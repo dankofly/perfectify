@@ -58,7 +58,7 @@ echo '{"tool_name":"Bash","tool_input":{"command":"rm -rf /srv/data"}}' \
   | python3 hooks/perfectify_guard.py
 ```
 
-The first prints `self-test: 31/31 cases correct`. The second prints a
+The first prints `self-test: 34/34 cases correct`. The second prints a
 `permissionDecision: "ask"` payload. A benign command prints nothing and exits 0.
 
 Other harnesses: Codex, Hermes and OpenCode each have their own pre-execution
@@ -71,7 +71,7 @@ is Claude Code's hook format only and nothing here has been measured elsewhere.
 
 ## What it does
 
-Matches ~30 deterministic patterns and returns `ask`. Destructive work is
+Matches 28 deterministic patterns and returns `ask`. Destructive work is
 legitimate work most of the time, and a blanket deny only teaches people to
 uninstall the hook; the goal is that a human sees the command, not that the
 action becomes impossible. The identity gate below is the one exception, and it
@@ -148,7 +148,7 @@ The log is a record of what was stopped, not a transcript of the session.
 - **The notify path is not a gate.** It reports; it does not wait for an answer.
   Approval still happens in the harness. A queue that blocks until an admin
   replies is a different, bigger thing and is not in here.
-- **Unmeasured.** The 31 self-test cases are hand-written by the author. There is
+- **Unmeasured.** The 34 self-test cases are hand-written by the author. There is
   no held-out corpus and no false-positive rate from real sessions. If you run it
   and it fires on something ordinary, that is a bug worth an issue.
 

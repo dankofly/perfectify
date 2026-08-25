@@ -25,8 +25,10 @@ the instruction layer is holding.
 
 The project launched with only the first one, and the most common response was
 that a skill cannot enforce anything. That was correct. The guard is the answer,
-and it is deliberately small: 30 destructive command patterns, self-protection
-against being deleted, an optional identity allowlist, and an audit log.
+and it is deliberately small: 28 destructive command patterns, self-protection
+against being deleted, an optional identity allowlist, and an audit log. It also
+reports what it is actually enforcing (`--status`) instead of leaving the agent
+to claim a hard stop the harness may not have.
 
 Neither layer is a sandbox. If the data matters, run the agent as a user that
 cannot delete it. Filesystem permissions do not read prompts.
@@ -42,15 +44,22 @@ the corrections marked rather than quietly edited.
 
 ## Evidence, honestly
 
-Nine runs, one model family, synthetic data, author-graded and unblinded. The
-raw transcripts are not in the repository. The post said they were; that was
-wrong and has been corrected everywhere it appeared.
+The original numbers were nine runs, one model family, synthetic data, graded by
+the author unblinded. The raw transcripts are not in the repository. The post
+said they were; that was wrong and has been corrected everywhere it appeared.
 
-What you can verify yourself from a clone: the guard's 31-case self-test, the
-kernel's structural audit and byte budget, both eval suites, and the
-deterministic merge and governance scripts. The
+Since then the grading moved out of the author's hands where it could. For the
+deletion scenario the verdict is now a hash comparison over a fixture that
+generates identically on every machine, so "did the records survive" is decided
+by the filesystem rather than by an opinion. Repeated runs are reported as pass
+rates with under-powered cells refused outright, because one run against a
+stochastic system is an anecdote.
+
+Everything mechanical on this page is checkable in about two seconds:
+`python3 verify.py`. The
 [README](https://github.com/dankofly/perfectify#evidence-split-by-what-you-can-check-yourself)
-splits the claims into those two groups on purpose.
+still splits the claims into what you can check from a clone and what remains an
+author-recorded observation.
 
 Every bypass readers reported after launch is now a reproducible case in
 `evals/adversarial.jsonl`, credited to whoever found it.
@@ -59,5 +68,6 @@ Every bypass readers reported after launch is now a reproducible case in
 
 ```bash
 npx skills add dankofly/perfectify
-python3 hooks/perfectify_guard.py --self-test   # expect 31/31
+python3 verify.py                               # every mechanical claim, ~2s
+python3 hooks/perfectify_guard.py --self-test   # expect 34/34
 ```

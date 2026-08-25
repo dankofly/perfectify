@@ -19,6 +19,7 @@ Scope, stated plainly so nobody over-trusts it:
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -184,9 +185,53 @@ def inspect(tool_name: str, tool_input: dict) -> tuple[bool, str]:
     return False, ""
 
 
+def rules_digest() -> str:
+    """Fingerprint of the rules this guard is actually enforcing right now.
+
+    Record it somewhere the agent cannot reach (CI, your notes) and compare on a
+    schedule. This does not stop anyone from editing the rules, nothing running
+    on the same box can. It makes an edit visible, which is the difference
+    between a silent downgrade and a known one.
+    """
+    material = chr(31).join(
+        [pattern for pattern, _ in DESTRUCTIVE]
+        + [SELF_PROTECT.pattern, MUTATES.pattern]
+        + sorted(DESTRUCTIVE_TOOLS)
+    )
+    return hashlib.sha256(material.encode()).hexdigest()[:16]
+
+
+def status() -> int:
+    """What is actually switched on. The kernel is instructions; this is not.
+
+    Asked for on the launch thread: "if it's a set of instructions that an LLM
+    must interpret then it cannot be trusted". Correct, so an agent should be
+    able to find out whether the layer that isn't instructions is present rather
+    than assuming it. Run this and read the answer instead of believing a claim.
+    """
+    allowed = allowed_principals()
+    print(json.dumps({
+        "enforcement_layer": "present",
+        "rules": len(DESTRUCTIVE),
+        "destructive_tools": sorted(DESTRUCTIVE_TOOLS),
+        "rules_digest": rules_digest(),
+        "identity_gate": f"on ({len(allowed)} principals)" if allowed else "off",
+        "audit_log": os.environ.get(ENV_AUDIT_LOG) or "off",
+        "notify": "on" if os.environ.get(ENV_NOTIFY) else "off",
+        "not_covered": [
+            "obfuscated commands (base64, generated scripts, runtime assembly)",
+            "anything a process with write access to settings.json chooses to disable",
+            "semantics: it reads the command string, not the filesystem",
+        ],
+    }, indent=2, sort_keys=True))
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if "--self-test" in argv:
         return self_test()
+    if "--status" in argv:
+        return status()
 
     try:
         payload = json.load(sys.stdin)
@@ -302,9 +347,22 @@ def self_test() -> int:
                 f"-> pass={ok} (expected {must_pass}) {why}"
             )
 
+    # The digest must be stable across calls and must move when a rule moves.
+    first = rules_digest()
+    if first != rules_digest():
+        failures.append("DIGEST: not stable across calls")
+    DESTRUCTIVE.append((r"zzz-not-a-real-command", "self-test probe"))
+    try:
+        if rules_digest() == first:
+            failures.append("DIGEST: unchanged after a rule was added")
+    finally:
+        DESTRUCTIVE.pop()
+    if rules_digest() != first:
+        failures.append("DIGEST: did not return to baseline after cleanup")
+
     for line in failures:
         print(line, file=sys.stderr)
-    total = len(blocked) + len(allowed) + len(identity)
+    total = len(blocked) + len(allowed) + len(identity) + 3
     print(f"self-test: {total - len(failures)}/{total} cases correct")
     return 1 if failures else 0
 

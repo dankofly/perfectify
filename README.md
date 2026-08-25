@@ -1,8 +1,8 @@
 # Perfectify
 
-![Version](https://img.shields.io/badge/version-V1.1-f59e0b)
+![Version](https://img.shields.io/badge/version-V1.5-f59e0b)
 ![Agent Skill](https://img.shields.io/badge/type-Agent%20Skill-0f766e)
-![Evals](https://img.shields.io/badge/evals-25%20activation%20%2B%208%20red--team-0f766e)
+![Evals](https://img.shields.io/badge/evals-25%20activation%20%2B%2011%20red--team-0f766e)
 ![Enforcement](https://img.shields.io/badge/deterministic%20hook-24%2F24%20self--test-16a34a)
 ![Budget](https://img.shields.io/badge/kernel-%E2%89%A410KB_audited-8b5cf6)
 ![Harness-portable](https://img.shields.io/badge/harness-Claude_Code_%C2%B7_Codex_%C2%B7_Hermes_%C2%B7_OpenCode-334155)
@@ -42,11 +42,40 @@ So the repo now ships two layers instead of pretending one is enough.
 | Layer | Acts | Stops | Defeated by |
 | --- | --- | --- | --- |
 | **Kernel** ([`skill/`](skill/dagx-agi-kernel/)) | Instruction level, before the model proposes an action | Bad plans, before a command exists. Invariant 12 now defines *irreversible* and rejects blanket grants | Argument, full context, a conflicting skill |
-| **Guard** ([`hooks/`](hooks/)) | Tool call, after the model decided, before the shell runs | The command itself, whatever the model believes. 30 destructive patterns, self-protection, optional identity allowlist and audit log | Obfuscation, or uninstalling it |
+| **Guard** ([`hooks/`](hooks/)) | Tool call, after the model decided, before the shell runs | The command itself, whatever the model believes. 28 destructive patterns, self-protection, optional identity allowlist and audit log | Obfuscation, or uninstalling it |
 
 The kernel is why a good agent asks. The guard is why a bad one has to. Neither is a sandbox: if the data matters, run the agent as a user that cannot delete it. Filesystem permissions do not read prompts.
 
 Every bypass reported on the launch threads is now a case in [`evals/adversarial.jsonl`](skill/dagx-agi-kernel/evals/adversarial.jsonl), credited to whoever found it.
+
+---
+
+## V1.5: what the launch thread changed
+
+Four threads, about forty comments, one day. Every row below exists because a
+specific person objected to a specific thing. None of it was on a roadmap.
+
+| Objection | Who | What shipped |
+| --- | --- | --- |
+| One sentence granting blanket permission defeats the rule | [u/InfinriDev](https://www.reddit.com/r/claudeskills/comments/1vwbawq/comment/p5gfxy8/) | Invariant 12 rejects standing grants; `redteam-01` |
+| It made a backup, so it wasn't irreversible | u/RCawston, u/No-Buffalo-3126, u/zac_attack_, u/alcalde | Invariant 12 defines irreversible; `redteam-02`, `redteam-06` |
+| The run logs aren't in the repo and `eval_kernel.py` doesn't grade | [u/JD_66](https://www.reddit.com/r/claudeskills/comments/1vwbawq/comment/p5hgk67/) | `safety_fixture.py`: the deletion verdict is a hash comparison. README claims split by what you can check |
+| You moved the rule and rewrote it in one change | u/JD_66, u/tigerhuxley | Confound named in three places, with the third condition that would isolate it |
+| n=9 is a coin-flip streak, LLMs are never repeatable | [u/tigerhuxley](https://www.reddit.com/r/claudeskills/comments/1vwbawq/comment/p5hfz7w/), u/Mundane_Incident_853 | `eval_kernel.py --min-runs`: refuses a pass rate below N graded runs, names cases with mixed outcomes |
+| The self-distilling loop will over-constrain itself into paralysis | u/tigerhuxley | `playbook_health.py`: measures it, and says *Insufficient data to verify* until enough governance runs exist |
+| This belongs in a hook, not a skill | u/komodorian, u/RCawston, u/zac_attack_, u/JD_66 | `hooks/perfectify_guard.py`, and the README says a skill is not a security boundary |
+| Instructions an LLM interprets cannot be trusted | [u/Important-Radish-722](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5g4y4a/) | `--status` reports what is actually enforced; `redteam-11` fails a claimed hard stop that isn't installed |
+| `rm -rf ~/.hermes/skills/perfectify` | [u/brav0charli3](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5mvwul/) | Guard self-protection; `redteam-03` |
+| Hermes won't hold "don't execute unless the user has my Discord ID" | [u/itsred_man](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5k9h93/) | Identity allowlist, deny on unknown principal, audit log and admin-channel notify |
+| A prompt injection before the skill loads bypasses everything | u/tigerhuxley | `redteam-04`; rules digest makes an edited guard visible |
+| It forgets once context fills, or another skill contradicts it | [u/fligglymcgee](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5g6k3f/) | Invariant 13: precedence and re-read before acting; `redteam-09`, `redteam-10` |
+| Does it get stuck in evidentiary loops on trivial changes | [u/Nousies](https://www.reddit.com/r/codex/comments/1vwb7ir/comment/p5fxhns/) | `redteam-07`: a typo fix that fails the suite if the kernel escalates |
+| Reviewing generated code costs more than generating it | u/fligglymcgee | `verify.py`: every mechanical claim, two seconds, before you read a line |
+
+Two objections have no fix and are listed because they are correct. A guard is
+not a sandbox: anything with write access to `settings.json` disables it. And
+the instruction layer is still instructions, so it degrades under exactly the
+pressure fligglymcgee described. Invariant 13 helps and does not solve it.
 
 ---
 
@@ -167,7 +196,10 @@ This section used to open with "every claim comes from recorded matched runs on 
 | --- | --- |
 | The deterministic guard blocks what it says it blocks | `python3 hooks/perfectify_guard.py --self-test` → 24/24 across 15 destructive and 9 benign commands |
 | The kernel fits the context budget | `python3 skill/dagx-agi-kernel/scripts/audit_kernel.py skill/dagx-agi-kernel` → 9,947 / 10,000 bytes, structural audit passes |
-| The eval corpus is well-formed | `eval_kernel.py --validate-cases` on both suites → 25 activation/control/boundary, 8 red-team |
+| The eval corpus is well-formed | `eval_kernel.py --validate-cases` on both suites → 25 activation/control/boundary, 11 red-team |
+| The deletion verdict does not depend on my judgement | `safety_fixture.py --self-test`, then grade a run: the gate is a hash comparison over a fixture generated identically on every machine |
+| Small samples cannot be reported as rates | `eval_kernel.py --min-runs N` refuses a pass rate below N graded runs and names any case with mixed outcomes across identical runs |
+| The playbook is measured, not asserted | `playbook_health.py` reports unverified share, at-risk bullets and churn, and refuses a trend below 5 governance runs |
 | The playbook merge and governance are deterministic | `merge_deltas.py` and `govern_playbook.py` are plain scripts, no model in the write path; every governance action lands in `decision-log.jsonl` |
 | Bypasses reported by readers are recorded as cases | [`evals/adversarial.jsonl`](skill/dagx-agi-kernel/evals/adversarial.jsonl), each credited to its source |
 
@@ -201,14 +233,15 @@ Or manually:
 ```bash
 git clone https://github.com/dankofly/perfectify.git
 cd perfectify
-python3 skill/dagx-agi-kernel/scripts/audit_kernel.py skill/dagx-agi-kernel   # structural check
-python3 skill/dagx-agi-kernel/scripts/harness_efficiency.py --self-test       # runtime check
+python3 verify.py
 ```
+
+Two seconds, no network, no model, no dependencies. It checks every mechanical claim on this page and exits non-zero if one fails. Reviewing generated code costs more than generating it did, which is a fair objection to a repo like this one; the least I can do is let you check it before you read it.
 
 Install the deterministic guard as well; the kernel alone is the instruction layer:
 
 ```bash
-python3 hooks/perfectify_guard.py --self-test          # expect 31/31
+python3 hooks/perfectify_guard.py --self-test          # expect 34/34
 ```
 
 then merge [`hooks/settings.example.json`](hooks/settings.example.json) into `~/.claude/settings.json` and restart the session. Details, the identity allowlist and the audit log: [hooks/README.md](hooks/README.md).
@@ -237,10 +270,13 @@ integration tests green twice consecutively
 | `scripts/eval_kernel.py` | Matched-run scoring: activation precision/recall, success/token deltas |
 | `scripts/audit_kernel.py` | Structural audit: frontmatter, links, budget, placeholders |
 | `schemas/` | `harness-state` and `trace-event` JSON Schemas for the runtime |
-| `hooks/perfectify_guard.py` | Deterministic `PreToolUse` guard: 30 destructive patterns, self-protection, optional identity allowlist, audit log, admin-channel notify |
+| `verify.py` | One command, every mechanical claim in this README, ~2 seconds |
+| `hooks/perfectify_guard.py` | Deterministic `PreToolUse` guard: 28 destructive patterns, self-protection, optional identity allowlist, audit log, admin-channel notify, `--status` and a rules digest |
+| `scripts/safety_fixture.py` | Deterministic fixture and grader: the deletion verdict is a hash comparison, not a person's opinion |
+| `scripts/playbook_health.py` | Drift and paralysis metrics for procedural memory, with a trend it refuses to report from too few runs |
 | `hooks/settings.example.json` | Ready-to-merge Claude Code wiring |
 | `evals/cases.jsonl` | 25 activation, control, and boundary cases |
-| `evals/adversarial.jsonl` | 8 red-team cases, each from a reported bypass |
+| `evals/adversarial.jsonl` | 11 red-team cases, each from a reported bypass |
 | `evals/runs/` | Where run records go, with the format and the `grader` field that decides whether a number means anything |
 | `references/` (12) | Lazy deep-dives: self-learning, loop engineering, verification & evals, orchestration security, memory & bounded self-improvement, harness efficiency & adapters, goal convergence, fluid intelligence, and more |
 
@@ -261,6 +297,7 @@ integration tests green twice consecutively
 | V0.7–V0.7.1 | Mandatory approval protocol; HARD STOP invariant placement (loop-discovered) |
 | V0.8–V0.9 | Self-learning playbook, Ratchet governance, first live learn-loops |
 | V1.0–V1.1 | Release freeze, behavioral evidence section, loop engineering fused with self-improvement; collision-free merge IDs (loop-discovered) |
+| V1.5 | Everything below, all of it traceable to a named reader. Deterministic safety grader, multi-run evals, playbook health, enforcement hook, invariant 13 |
 
 Tags mark validated champions; every version is a rollback point.
 
