@@ -12,7 +12,14 @@ from pathlib import Path
 from typing import Any
 
 
-EXPECTED_GROUPS = {"activate": 10, "negative_control": 10, "boundary": 5}
+# Suite -> required group counts. `None` means "any number, at least one".
+SUITES: dict[str, dict[str, int | None]] = {
+    "activation": {"activate": 10, "negative_control": 10, "boundary": 5},
+    "adversarial": {"redteam": None},
+}
+# Groups whose should_activate value is fixed. `redteam` is mixed on purpose:
+# it carries both bypass attempts and a cost control that must NOT escalate.
+FIXED_ACTIVATION = {"activate": True, "negative_control": False}
 
 
 def load_jsonl(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
@@ -39,21 +46,29 @@ def load_jsonl(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
     return rows, errors
 
 
-def validate_cases(rows: list[dict[str, Any]], source: Path) -> list[str]:
+def validate_cases(
+    rows: list[dict[str, Any]], source: Path, suite: str = "activation"
+) -> list[str]:
     errors: list[str] = []
     ids: set[str] = set()
     groups: Counter[str] = Counter()
+    expected = SUITES[suite]
+    fixed_total = (
+        sum(count for count in expected.values() if count is not None)
+        if all(count is not None for count in expected.values())
+        else None
+    )
 
-    if len(rows) != sum(EXPECTED_GROUPS.values()):
-        errors.append(
-            f"{source}: expected {sum(EXPECTED_GROUPS.values())} cases, found {len(rows)}"
-        )
+    if fixed_total is not None and len(rows) != fixed_total:
+        errors.append(f"{source}: expected {fixed_total} cases, found {len(rows)}")
+    elif not rows:
+        errors.append(f"{source}: suite {suite!r} needs at least one case")
 
     for row in rows:
         line = row.get("_line", "?")
         case_id = row.get("id")
         group = row.get("group")
-        expected = row.get("should_activate")
+        should_activate = row.get("should_activate")
         prompt = row.get("prompt")
         success = row.get("success_criteria")
         protected = row.get("protected_behaviors")
@@ -65,17 +80,18 @@ def validate_cases(rows: list[dict[str, Any]], source: Path) -> list[str]:
         else:
             ids.add(case_id)
 
-        if group not in EXPECTED_GROUPS:
-            errors.append(f"{source}:{line}: invalid group {group!r}")
+        if group not in expected:
+            errors.append(f"{source}:{line}: invalid group {group!r} for suite {suite!r}")
         else:
             groups[group] += 1
 
-        if type(expected) is not bool:
+        if type(should_activate) is not bool:
             errors.append(f"{source}:{line}: should_activate must be boolean")
-        elif group == "activate" and expected is not True:
-            errors.append(f"{source}:{line}: activate cases must expect activation")
-        elif group == "negative_control" and expected is not False:
-            errors.append(f"{source}:{line}: negative controls must not expect activation")
+        elif group in FIXED_ACTIVATION and should_activate is not FIXED_ACTIVATION[group]:
+            errors.append(
+                f"{source}:{line}: {group} cases must have "
+                f"should_activate={FIXED_ACTIVATION[group]}"
+            )
 
         if not isinstance(prompt, str) or not prompt.strip():
             errors.append(f"{source}:{line}: prompt must be a non-empty string")
@@ -88,16 +104,21 @@ def validate_cases(rows: list[dict[str, Any]], source: Path) -> list[str]:
             elif any(not isinstance(item, str) or not item.strip() for item in value):
                 errors.append(f"{source}:{line}: {field} entries must be non-empty strings")
 
-    if dict(groups) != EXPECTED_GROUPS:
-        errors.append(
-            f"{source}: expected group counts {EXPECTED_GROUPS}, found {dict(groups)}"
-        )
+    for group, count in expected.items():
+        found = groups.get(group, 0)
+        if count is None:
+            if found == 0:
+                errors.append(f"{source}: suite {suite!r} needs cases in group {group!r}")
+        elif found != count:
+            errors.append(f"{source}: group {group!r} expected {count} cases, found {found}")
     return errors
 
 
 def validate_results(
-    rows: list[dict[str, Any]], source: Path, case_ids: set[str]
+    rows: list[dict[str, Any]], source: Path, case_ids: set[str],
+    allow_repeats: bool = False,
 ) -> list[str]:
+    """allow_repeats is set in multi-run mode, where N rows per case is the point."""
     errors: list[str] = []
     seen: set[str] = set()
     nullable_bools = ("activated", "success")
@@ -115,7 +136,7 @@ def validate_results(
         if not isinstance(case_id, str) or not case_id:
             errors.append(f"{source}:{line}: id must be a non-empty string")
             continue
-        if case_id in seen:
+        if case_id in seen and not allow_repeats:
             errors.append(f"{source}:{line}: duplicate result id {case_id!r}")
         seen.add(case_id)
         if case_id not in case_ids:
@@ -314,20 +335,103 @@ def paired_comparison(
     }
 
 
+def multi_run_summary(
+    cases: list[dict[str, Any]], rows: list[dict[str, Any]], min_runs: int
+) -> dict[str, Any]:
+    """Per-case pass rate over repeated runs, with under-powered cells named.
+
+    A single run against a stochastic system is an anecdote. This refuses to
+    print a rate for any case with fewer than `min_runs` observations rather
+    than reporting 1/1 as 100%.
+    """
+    by_case: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        case_id = row.get("id")
+        if isinstance(case_id, str):
+            by_case.setdefault(case_id, []).append(row)
+
+    per_case: dict[str, Any] = {}
+    underpowered: list[str] = []
+    unstable: list[str] = []
+    graded_rates: list[float] = []
+
+    for case in cases:
+        case_id = case["id"]
+        runs = by_case.get(case_id, [])
+        known = [r["success"] for r in runs if type(r.get("success")) is bool]
+        entry: dict[str, Any] = {"runs": len(runs), "graded": len(known)}
+        if len(known) < min_runs:
+            entry["pass_rate"] = None
+            entry["status"] = (
+                f"Insufficient data to verify: {len(known)} graded runs, "
+                f"{min_runs} required"
+            )
+            underpowered.append(case_id)
+        else:
+            passes = sum(1 for value in known if value)
+            rate = passes / len(known)
+            entry["passes"] = passes
+            entry["pass_rate"] = round(rate, 4)
+            entry["status"] = "reported"
+            graded_rates.append(rate)
+            # Neither reliably safe nor reliably broken is the finding that
+            # matters most for a gate, so it gets named rather than averaged away.
+            if 0.0 < rate < 1.0:
+                entry["stability"] = "mixed outcomes across identical runs"
+                unstable.append(case_id)
+            else:
+                entry["stability"] = "consistent across graded runs"
+        per_case[case_id] = entry
+
+    graders = Counter(
+        r.get("grader") for r in rows if isinstance(r.get("grader"), str)
+    )
+    deterministic = sum(
+        count for grader, count in graders.items()
+        if grader.lower().startswith("deterministic")
+    )
+
+    return {
+        "min_runs": min_runs,
+        "cases_total": len(cases),
+        "cases_reportable": len(cases) - len(underpowered),
+        "cases_underpowered": underpowered,
+        "cases_with_mixed_outcomes": unstable,
+        "mean_pass_rate_over_reportable": (
+            round(statistics.fmean(graded_rates), 4) if graded_rates else None
+        ),
+        "graded_rows": sum(graders.values()),
+        "deterministically_graded_rows": deterministic,
+        "grader_note": (
+            "Rows whose grader string does not start with 'deterministic' were "
+            "decided by a person or a heuristic. Weigh them accordingly."
+        ),
+        "per_case": per_case,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", required=True, type=Path)
     parser.add_argument("--candidate", type=Path)
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--validate-cases", action="store_true")
+    parser.add_argument(
+        "--suite", choices=sorted(SUITES), default="activation",
+        help="case-file layout to validate against (default: activation)",
+    )
     parser.add_argument("--strict-completeness", action="store_true")
+    parser.add_argument(
+        "--min-runs", type=int, default=None,
+        help="multi-run mode: require N graded runs per case before reporting a rate",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     cases, errors = load_jsonl(args.cases)
-    errors.extend(validate_cases(cases, args.cases))
+    errors.extend(validate_cases(cases, args.cases, args.suite))
     case_ids = {row.get("id") for row in cases if isinstance(row.get("id"), str)}
 
     candidate_rows: list[dict[str, Any]] = []
@@ -335,11 +439,15 @@ def main() -> int:
     if args.candidate:
         candidate_rows, candidate_errors = load_jsonl(args.candidate)
         errors.extend(candidate_errors)
-        errors.extend(validate_results(candidate_rows, args.candidate, case_ids))
+        errors.extend(validate_results(
+            candidate_rows, args.candidate, case_ids,
+            allow_repeats=args.min_runs is not None))
     if args.baseline:
         baseline_rows, baseline_errors = load_jsonl(args.baseline)
         errors.extend(baseline_errors)
-        errors.extend(validate_results(baseline_rows, args.baseline, case_ids))
+        errors.extend(validate_results(
+            baseline_rows, args.baseline, case_ids,
+            allow_repeats=args.min_runs is not None))
 
     if errors:
         print(json.dumps({"status": "failed", "errors": errors}, indent=2, sort_keys=True))
@@ -347,6 +455,7 @@ def main() -> int:
 
     report: dict[str, Any] = {
         "status": "validated" if not args.candidate else "scored",
+        "suite": args.suite,
         "case_count": len(cases),
         "group_counts": dict(Counter(case["group"] for case in cases)),
         "limitations": [
@@ -354,6 +463,26 @@ def main() -> int:
             "Recorded success still requires an auditable deterministic or blinded grader.",
         ],
     }
+
+    if args.min_runs is not None:
+        # Multi-run mode replaces the single-row metrics rather than layering on
+        # top: row_map keeps one row per id, which would quietly discard every
+        # run but the last.
+        if args.candidate:
+            report["candidate_runs"] = multi_run_summary(
+                cases, candidate_rows, args.min_runs)
+        if args.baseline:
+            report["baseline_runs"] = multi_run_summary(
+                cases, baseline_rows, args.min_runs)
+        report["limitations"].append(
+            "Multi-run mode reports per-case pass rates only; activation "
+            "precision/recall and token deltas need single-run files."
+        )
+        under = report.get("candidate_runs", {}).get("cases_underpowered", [])
+        if under:
+            report["status"] = "incomplete"
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 1 if (args.strict_completeness and under) else 0
 
     incomplete = False
     if args.candidate:

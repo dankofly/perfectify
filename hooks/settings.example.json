@@ -1,0 +1,31 @@
+{
+  "_comment": "Claude Code hook wiring for perfectify_guard.py. Merge into ~/.claude/settings.json or .claude/settings.json. Replace the absolute path. Restart the session: hook config is read at startup.",
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /absolute/path/to/perfectify/hooks/perfectify_guard.py"
+          }
+        ]
+      }
+    ]
+  },
+
+  "_comment_sandbox": "Optional second layer, suggested by a reader on the launch thread and verified against Claude Code 2.1.123. autoAllowBashIfSandboxed defaults to TRUE, so sandboxed Bash is auto-approved unless you set this. Turning it off means you get the permission prompt back. Omit this block if you do not want that behaviour change.",
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": false
+  },
+
+  "env": {
+    "_comment_env": "All four are optional. Unset means off.",
+    "PERFECTIFY_AUDIT_LOG": "/var/log/perfectify-decisions.jsonl",
+    "PERFECTIFY_NOTIFY_CMD": "curl -sS -X POST -H 'Content-Type: application/json' --data-binary @- https://discord.com/api/webhooks/REPLACE/ME",
+    "PERFECTIFY_ALLOWED_PRINCIPALS": "discord:000000000000000000",
+    "PERFECTIFY_PRINCIPAL": "discord:000000000000000000"
+  }
+}
