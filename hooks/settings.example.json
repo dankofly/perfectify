@@ -1,0 +1,25 @@
+{
+  "_comment": "Claude Code hook wiring for perfectify_guard.py. Merge into ~/.claude/settings.json or .claude/settings.json. Replace the absolute path. Restart the session: hook config is read at startup.",
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /absolute/path/to/perfectify/hooks/perfectify_guard.py"
+          }
+        ]
+      }
+    ]
+  },
+
+  "env": {
+    "_comment_env": "All four are optional. Unset means off.",
+    "PERFECTIFY_AUDIT_LOG": "/var/log/perfectify-decisions.jsonl",
+    "PERFECTIFY_NOTIFY_CMD": "curl -sS -X POST -H 'Content-Type: application/json' --data-binary @- https://discord.com/api/webhooks/REPLACE/ME",
+    "PERFECTIFY_ALLOWED_PRINCIPALS": "discord:000000000000000000",
+    "PERFECTIFY_PRINCIPAL": "discord:000000000000000000"
+  }
+}

@@ -12,7 +12,14 @@ from pathlib import Path
 from typing import Any
 
 
-EXPECTED_GROUPS = {"activate": 10, "negative_control": 10, "boundary": 5}
+# Suite -> required group counts. `None` means "any number, at least one".
+SUITES: dict[str, dict[str, int | None]] = {
+    "activation": {"activate": 10, "negative_control": 10, "boundary": 5},
+    "adversarial": {"redteam": None},
+}
+# Groups whose should_activate value is fixed. `redteam` is mixed on purpose:
+# it carries both bypass attempts and a cost control that must NOT escalate.
+FIXED_ACTIVATION = {"activate": True, "negative_control": False}
 
 
 def load_jsonl(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
@@ -39,21 +46,29 @@ def load_jsonl(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
     return rows, errors
 
 
-def validate_cases(rows: list[dict[str, Any]], source: Path) -> list[str]:
+def validate_cases(
+    rows: list[dict[str, Any]], source: Path, suite: str = "activation"
+) -> list[str]:
     errors: list[str] = []
     ids: set[str] = set()
     groups: Counter[str] = Counter()
+    expected = SUITES[suite]
+    fixed_total = (
+        sum(count for count in expected.values() if count is not None)
+        if all(count is not None for count in expected.values())
+        else None
+    )
 
-    if len(rows) != sum(EXPECTED_GROUPS.values()):
-        errors.append(
-            f"{source}: expected {sum(EXPECTED_GROUPS.values())} cases, found {len(rows)}"
-        )
+    if fixed_total is not None and len(rows) != fixed_total:
+        errors.append(f"{source}: expected {fixed_total} cases, found {len(rows)}")
+    elif not rows:
+        errors.append(f"{source}: suite {suite!r} needs at least one case")
 
     for row in rows:
         line = row.get("_line", "?")
         case_id = row.get("id")
         group = row.get("group")
-        expected = row.get("should_activate")
+        should_activate = row.get("should_activate")
         prompt = row.get("prompt")
         success = row.get("success_criteria")
         protected = row.get("protected_behaviors")
@@ -65,17 +80,18 @@ def validate_cases(rows: list[dict[str, Any]], source: Path) -> list[str]:
         else:
             ids.add(case_id)
 
-        if group not in EXPECTED_GROUPS:
-            errors.append(f"{source}:{line}: invalid group {group!r}")
+        if group not in expected:
+            errors.append(f"{source}:{line}: invalid group {group!r} for suite {suite!r}")
         else:
             groups[group] += 1
 
-        if type(expected) is not bool:
+        if type(should_activate) is not bool:
             errors.append(f"{source}:{line}: should_activate must be boolean")
-        elif group == "activate" and expected is not True:
-            errors.append(f"{source}:{line}: activate cases must expect activation")
-        elif group == "negative_control" and expected is not False:
-            errors.append(f"{source}:{line}: negative controls must not expect activation")
+        elif group in FIXED_ACTIVATION and should_activate is not FIXED_ACTIVATION[group]:
+            errors.append(
+                f"{source}:{line}: {group} cases must have "
+                f"should_activate={FIXED_ACTIVATION[group]}"
+            )
 
         if not isinstance(prompt, str) or not prompt.strip():
             errors.append(f"{source}:{line}: prompt must be a non-empty string")
@@ -88,10 +104,13 @@ def validate_cases(rows: list[dict[str, Any]], source: Path) -> list[str]:
             elif any(not isinstance(item, str) or not item.strip() for item in value):
                 errors.append(f"{source}:{line}: {field} entries must be non-empty strings")
 
-    if dict(groups) != EXPECTED_GROUPS:
-        errors.append(
-            f"{source}: expected group counts {EXPECTED_GROUPS}, found {dict(groups)}"
-        )
+    for group, count in expected.items():
+        found = groups.get(group, 0)
+        if count is None:
+            if found == 0:
+                errors.append(f"{source}: suite {suite!r} needs cases in group {group!r}")
+        elif found != count:
+            errors.append(f"{source}: group {group!r} expected {count} cases, found {found}")
     return errors
 
 
@@ -320,6 +339,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--candidate", type=Path)
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--validate-cases", action="store_true")
+    parser.add_argument(
+        "--suite", choices=sorted(SUITES), default="activation",
+        help="case-file layout to validate against (default: activation)",
+    )
     parser.add_argument("--strict-completeness", action="store_true")
     return parser.parse_args()
 
@@ -327,7 +350,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     cases, errors = load_jsonl(args.cases)
-    errors.extend(validate_cases(cases, args.cases))
+    errors.extend(validate_cases(cases, args.cases, args.suite))
     case_ids = {row.get("id") for row in cases if isinstance(row.get("id"), str)}
 
     candidate_rows: list[dict[str, Any]] = []
@@ -347,6 +370,7 @@ def main() -> int:
 
     report: dict[str, Any] = {
         "status": "validated" if not args.candidate else "scored",
+        "suite": args.suite,
         "case_count": len(cases),
         "group_counts": dict(Counter(case["group"] for case in cases)),
         "limitations": [

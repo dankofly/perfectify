@@ -138,6 +138,7 @@ def main() -> int:
         root / "scripts" / "eval_kernel.py",
         root / "scripts" / "harness_efficiency.py",
         root / "evals" / "cases.jsonl",
+        root / "evals" / "adversarial.jsonl",
         root / "templates" / "trial-ledger.md",
         root / "references" / "evaluation-protocol.md",
         root / "references" / "formal-control-state.md",
