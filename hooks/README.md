@@ -45,10 +45,24 @@ Use an absolute path. Restart the session; hook config is read at startup. A
 ready-to-merge file with the optional environment variables is in
 [`settings.example.json`](settings.example.json).
 
-One reader suggested pairing this with `permissions.ask` on Bash and disabling
+A reader suggested pairing this with `permissions.ask` on Bash and turning off
 auto-allow inside the sandbox, so the hook is not the only thing standing there.
-Those keys move between Claude Code versions, so check `/config` and the current
-settings documentation for the exact names rather than copying them from here.
+That was worth checking rather than repeating, and it holds:
+
+```json
+{ "sandbox": { "enabled": true, "autoAllowBashIfSandboxed": false } }
+```
+
+`sandbox.autoAllowBashIfSandboxed` **defaults to true**, so with sandboxing on,
+Bash commands are auto-approved and neither the ask rule nor your attention sees
+them. Setting it to false is what makes the permission prompt fire again.
+Verified against Claude Code 2.1.123 by reading the settings schema in the
+shipped binary, not from documentation, so re-check it on a much newer version.
+
+One related trap from the changelog, fixed in 2.1.34: commands excluded from
+sandboxing (`sandbox.excludedCommands`, `dangerouslyDisableSandbox`) could
+bypass the Bash ask rule while `autoAllowBashIfSandboxed` was enabled. If you
+are pinned below that version, the exclusion list is a hole in this layer.
 
 Verify before you trust it:
 

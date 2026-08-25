@@ -15,6 +15,12 @@
     ]
   },
 
+  "_comment_sandbox": "Optional second layer, suggested by a reader on the launch thread and verified against Claude Code 2.1.123. autoAllowBashIfSandboxed defaults to TRUE, so sandboxed Bash is auto-approved unless you set this. Turning it off means you get the permission prompt back. Omit this block if you do not want that behaviour change.",
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": false
+  },
+
   "env": {
     "_comment_env": "All four are optional. Unset means off.",
     "PERFECTIFY_AUDIT_LOG": "/var/log/perfectify-decisions.jsonl",

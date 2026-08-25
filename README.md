@@ -71,6 +71,7 @@ specific person objected to a specific thing. None of it was on a roadmap.
 | It forgets once context fills, or another skill contradicts it | [u/fligglymcgee](https://www.reddit.com/r/hermesagent/comments/1vwbhpv/comment/p5g6k3f/) | Invariant 13: precedence and re-read before acting; `redteam-09`, `redteam-10` |
 | Does it get stuck in evidentiary loops on trivial changes | [u/Nousies](https://www.reddit.com/r/codex/comments/1vwb7ir/comment/p5fxhns/) | `redteam-07`: a typo fix that fails the suite if the kernel escalates |
 | Reviewing generated code costs more than generating it | u/fligglymcgee | `verify.py`: every mechanical claim, two seconds, before you read a line |
+| Pair the hook with `permissions.ask` and no auto-allow in the sandbox | [u/zac_attack_](https://www.reddit.com/r/claudeskills/comments/1vwbawq/comment/p5pjuix/) | Checked against the shipped settings schema and correct: `sandbox.autoAllowBashIfSandboxed` defaults to true. Wiring and the caveat are in [hooks/README.md](hooks/README.md) |
 
 Two objections have no fix and are listed because they are correct. A guard is
 not a sandbox: anything with write access to `settings.json` disables it. And
